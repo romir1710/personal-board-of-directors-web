@@ -1,963 +1,551 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Personal Board of Directors</title>
-  <meta name="description" content="Your AI-powered Personal Board of Directors — four expert advisors analysing every idea, decision, or challenge you bring to the table." />
+  <title>The Personal Board of Directors</title>
+  <meta name="description" content="A multi-agent AI deliberation chamber — convene The Personal Board of Directors." />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Playfair Display (editorial serif) + Inter (geometric sans) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            serif: ['"Playfair Display"', 'serif'],
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            obsidian: '#0a0a0c',
+            midnight: '#101218',
+            charcoal: '#16181f',
+            platinum: '#cfd2d6',
+            champagne: '#c9b27a',
+            bronze: '#9c7c4f',
+            wine: '#3a1118',
+            racing: '#b71c2b',
+          },
+        },
+      },
+    };
+  </script>
 
   <style>
-    /* ── Reset & Tokens ─────────────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { color-scheme: dark; }
+    html, body { background-color: #060608; }
 
-    :root {
-      --bg-base:       #0a0a0f;
-      --bg-surface:    #111118;
-      --bg-elevated:   #18181f;
-      --border:        rgba(255,255,255,0.07);
-      --border-bright: rgba(255,255,255,0.14);
+    ::selection { background: rgba(201, 178, 122, 0.25); color: #fff; }
 
-      /* Member accent colours */
-      --vis-1:   #ff6b00;
-      --vis-2:   #ff3d00;
-      --prag-1:  #00c6ff;
-      --prag-2:  #0072ff;
-      --adv-1:   #ff004f;
-      --adv-2:   #9000ff;
-      --chair-1: #ffd700;
-      --chair-2: #ff8c00;
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 10px; }
+    ::-webkit-scrollbar-track { background: #0a0a0c; }
+    ::-webkit-scrollbar-thumb { background: #2a2c34; border-radius: 6px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a3d47; }
 
-      --text-primary:   #f0f0f5;
-      --text-secondary: #8888aa;
-      --text-muted:     #444460;
-
-      --radius-sm:  6px;
-      --radius-md:  12px;
-      --radius-lg:  20px;
-      --radius-xl:  28px;
-
-      --shadow-glow-vis:   0 0 40px rgba(255,107,0,0.15);
-      --shadow-glow-prag:  0 0 40px rgba(0,114,255,0.15);
-      --shadow-glow-adv:   0 0 40px rgba(144,0,255,0.15);
-      --shadow-glow-chair: 0 0 60px rgba(255,215,0,0.12);
-
-      --font-body: 'Inter', sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+    /* Ambient luxury backdrop */
+    .ambient-bg {
+      background:
+        radial-gradient(900px circle at 12% -10%, rgba(201,178,122,0.06), transparent 45%),
+        radial-gradient(800px circle at 90% 0%, rgba(120,130,150,0.05), transparent 45%),
+        radial-gradient(1200px circle at 50% 120%, rgba(58,17,24,0.18), transparent 55%),
+        linear-gradient(180deg, #060608 0%, #0a0a0c 100%);
     }
 
-    html { scroll-behavior: smooth; }
+    .hairline { border: 1px solid rgba(201,178,122,0.14); }
+    .hairline-soft { border: 1px solid rgba(255,255,255,0.06); }
 
-    body {
-      font-family: var(--font-body);
-      background: var(--bg-base);
-      color: var(--text-primary);
-      min-height: 100vh;
-      line-height: 1.6;
-      overflow-x: hidden;
+    .glass {
+      background: rgba(22,24,31,0.55);
+      backdrop-filter: blur(14px) saturate(120%);
+      -webkit-backdrop-filter: blur(14px) saturate(120%);
     }
 
-    /* ── Animated background grid ─────────────────────────────────────── */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-      background-size: 60px 60px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* ── Layout ──────────────────────────────────────────────────────────── */
-    .page-wrapper {
-      position: relative;
-      z-index: 1;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 48px 24px 80px;
-    }
-
-    /* ── Header ──────────────────────────────────────────────────────────── */
-    .header {
-      text-align: center;
-      margin-bottom: 56px;
-    }
-
-    .header-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255,215,0,0.08);
-      border: 1px solid rgba(255,215,0,0.2);
-      border-radius: 100px;
-      padding: 6px 16px;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--chair-1);
-      margin-bottom: 24px;
-    }
-
-    .header-badge::before {
-      content: '';
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--chair-1);
-      animation: pulse-dot 2s ease-in-out infinite;
-    }
-
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%       { opacity: 0.4; transform: scale(0.6); }
-    }
-
-    h1 {
-      font-size: clamp(2rem, 5vw, 3.5rem);
-      font-weight: 900;
-      letter-spacing: -0.03em;
-      line-height: 1.1;
-      background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.55) 100%);
+    .gold-text {
+      background: linear-gradient(180deg, #e7d6a8 0%, #c9b27a 55%, #9c7c4f 100%);
       -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
       background-clip: text;
-      margin-bottom: 16px;
+      -webkit-text-fill-color: transparent;
     }
 
-    .header-sub {
-      font-size: 1rem;
-      color: var(--text-secondary);
-      max-width: 540px;
-      margin: 0 auto;
-      line-height: 1.7;
+    /* Pulsing status node */
+    .status-dot { box-shadow: 0 0 0 0 rgba(120, 200, 140, 0.55); animation: pulseNode 2.4s infinite; }
+    @keyframes pulseNode {
+      0% { box-shadow: 0 0 0 0 rgba(120,200,140,0.5); }
+      70% { box-shadow: 0 0 0 8px rgba(120,200,140,0); }
+      100% { box-shadow: 0 0 0 0 rgba(120,200,140,0); }
     }
 
-    /* ── Member pills ─────────────────────────────────────────────────── */
-    .member-pills {
-      display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 32px;
-    }
-
-    .pill {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      border-radius: 100px;
-      font-size: 13px;
-      font-weight: 500;
-      border: 1px solid;
-    }
-    .pill-vis   { background: rgba(255,107,0,0.08); border-color: rgba(255,107,0,0.25); color: var(--vis-1); }
-    .pill-prag  { background: rgba(0,114,255,0.08); border-color: rgba(0,114,255,0.25); color: var(--prag-1); }
-    .pill-adv   { background: rgba(144,0,255,0.08); border-color: rgba(144,0,255,0.25); color: #bf4fff; }
-    .pill-chair { background: rgba(255,215,0,0.08); border-color: rgba(255,215,0,0.25); color: var(--chair-1); }
-
-    /* ── Input panel ─────────────────────────────────────────────────── */
-    .input-panel {
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-xl);
-      padding: 32px;
-      margin-bottom: 48px;
-      transition: border-color 0.3s;
-    }
-
-    .input-panel:focus-within {
-      border-color: var(--border-bright);
-    }
-
-    .input-tabs {
-      display: flex;
-      gap: 4px;
-      margin-bottom: 20px;
-      background: var(--bg-base);
-      border-radius: var(--radius-md);
-      padding: 4px;
-      width: fit-content;
-    }
-
-    .tab-btn {
-      padding: 8px 20px;
-      border-radius: var(--radius-sm);
-      border: none;
-      background: transparent;
-      color: var(--text-secondary);
-      font-family: var(--font-body);
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .tab-btn.active {
-      background: var(--bg-elevated);
-      color: var(--text-primary);
-    }
-
-    .tab-pane { display: none; }
-    .tab-pane.active { display: block; }
-
-    #idea-input {
-      width: 100%;
-      min-height: 160px;
-      background: var(--bg-base);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      color: var(--text-primary);
-      font-family: var(--font-body);
-      font-size: 15px;
-      line-height: 1.7;
-      padding: 16px;
-      resize: vertical;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    #idea-input::placeholder { color: var(--text-muted); }
-    #idea-input:focus { border-color: var(--border-bright); }
-
-    .file-drop {
-      border: 1.5px dashed var(--border-bright);
-      border-radius: var(--radius-md);
-      padding: 40px 24px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
+    /* Shimmer skeleton */
+    .shimmer {
       position: relative;
+      overflow: hidden;
+      background: rgba(255,255,255,0.04);
+      border-radius: 4px;
     }
-    .file-drop:hover, .file-drop.dragover {
-      border-color: rgba(255,215,0,0.4);
-      background: rgba(255,215,0,0.03);
-    }
-    .file-drop input[type="file"] {
+    .shimmer::after {
+      content: "";
       position: absolute;
       inset: 0;
-      opacity: 0;
-      cursor: pointer;
+      transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+      animation: shimmerMove 1.6s infinite;
     }
-    .file-drop-icon { font-size: 36px; margin-bottom: 12px; }
-    .file-drop-label { font-size: 14px; color: var(--text-secondary); }
-    .file-drop-label strong { color: var(--text-primary); }
-    #file-name {
-      margin-top: 12px;
-      font-size: 13px;
-      color: var(--chair-1);
-      font-weight: 500;
-      min-height: 20px;
+    @keyframes shimmerMove { 100% { transform: translateX(100%); } }
+
+    /* Carbon fiber texture for Visionary card */
+    .carbon {
+      background-color: #0d0e11;
+      background-image:
+        linear-gradient(27deg, #121316 5px, transparent 5px),
+        linear-gradient(207deg, #121316 5px, transparent 5px),
+        linear-gradient(27deg, #0c0d0f 5px, transparent 5px),
+        linear-gradient(207deg, #0c0d0f 5px, transparent 5px);
+      background-size: 10px 10px;
+      background-position: 0 0, 5px 5px, 5px 5px, 10px 10px;
     }
 
-    .submit-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 20px;
-      gap: 16px;
-      flex-wrap: wrap;
+    /* Engineering grid for Pragmatist card */
+    .eng-grid {
+      background-color: #0c0d10;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+      background-size: 22px 22px;
     }
 
-    .char-count {
-      font-size: 12px;
-      color: var(--text-muted);
-      font-variant-numeric: tabular-nums;
-    }
+    /* Brutalist matte for Cynic card */
+    .matte { background: #0b0a0b; }
 
-    #submit-btn {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 32px;
-      border-radius: var(--radius-md);
-      border: none;
-      background: linear-gradient(135deg, var(--chair-1), var(--chair-2));
-      color: #000;
-      font-family: var(--font-body);
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.25s;
-      letter-spacing: -0.01em;
-    }
-    #submit-btn:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 32px rgba(255,215,0,0.35);
-    }
-    #submit-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-    }
-    #submit-btn .btn-icon { font-size: 18px; }
+    .focus-glow:focus { outline: none; border-color: rgba(201,178,122,0.55); box-shadow: 0 0 0 1px rgba(201,178,122,0.35), 0 0 28px rgba(201,178,122,0.12); }
 
-    /* ── Loading state ─────────────────────────────────────────────────── */
-    #loading-panel {
-      display: none;
-      text-align: center;
-      padding: 64px 24px;
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-xl);
-      margin-bottom: 48px;
-    }
+    .lux-shadow { box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 24px 60px -24px rgba(0,0,0,0.85); }
 
-    .deliberating-text {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 8px;
-    }
+    .fade-in { animation: fadeIn 0.6s ease both; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-    .deliberating-sub {
-      font-size: 13px;
-      color: var(--text-secondary);
-      margin-bottom: 40px;
-    }
-
-    .board-progress {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 0;
-      flex-wrap: wrap;
-    }
-
-    .progress-member {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      position: relative;
-      opacity: 0.3;
-      transition: opacity 0.5s;
-    }
-
-    .progress-member.active { opacity: 1; }
-
-    .progress-member .pm-icon {
-      width: 56px; height: 56px;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 24px;
-      border: 2px solid transparent;
-      transition: all 0.4s;
-    }
-
-    .progress-member.active .pm-icon { animation: spin-border 1.5s linear infinite; }
-
-    .pm-vis   .pm-icon { background: rgba(255,107,0,0.12); border-color: var(--vis-1); }
-    .pm-prag  .pm-icon { background: rgba(0,114,255,0.12); border-color: var(--prag-1); }
-    .pm-adv   .pm-icon { background: rgba(144,0,255,0.12); border-color: #bf4fff; }
-    .pm-chair .pm-icon { background: rgba(255,215,0,0.12); border-color: var(--chair-1); }
-
-    .progress-member .pm-label {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: var(--text-secondary);
-    }
-
-    .progress-connector {
-      width: 48px; height: 2px;
-      background: var(--border);
-      margin-bottom: 28px;
-      flex-shrink: 0;
-    }
-
-    @keyframes spin-border {
-      from { box-shadow: 0 0 0 0 rgba(255,215,0,0.3), 0 0 16px rgba(255,215,0,0.2); }
-      to   { box-shadow: 0 0 0 6px rgba(255,215,0,0), 0 0 16px rgba(255,215,0,0); }
-    }
-
-    /* ── Error banner ─────────────────────────────────────────────────── */
-    #error-banner {
-      display: none;
-      background: rgba(255,0,79,0.08);
-      border: 1px solid rgba(255,0,79,0.3);
-      border-radius: var(--radius-md);
-      padding: 16px 20px;
-      margin-bottom: 32px;
-      color: #ff6699;
-      font-size: 14px;
-    }
-
-    /* ── Results grid ─────────────────────────────────────────────────── */
-    #results-panel { display: none; }
-
-    .results-header {
-      text-align: center;
-      margin-bottom: 32px;
-    }
-    .results-title {
-      font-size: 1.4rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-    .results-meta {
-      font-size: 13px;
-      color: var(--text-secondary);
-      margin-top: 6px;
-    }
-
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      margin-bottom: 24px;
-    }
-
-    @media (max-width: 900px) {
-      .cards-grid { grid-template-columns: 1fr; }
-    }
-
-    /* ── Base card ─────────────────────────────────────────────────────── */
-    .board-card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      transition: transform 0.25s, box-shadow 0.25s;
-      animation: card-in 0.5s ease both;
-    }
-    .board-card:hover { transform: translateY(-4px); }
-
-    @keyframes card-in {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .card-vis   { animation-delay: 0.05s; box-shadow: var(--shadow-glow-vis); }
-    .card-prag  { animation-delay: 0.15s; box-shadow: var(--shadow-glow-prag); }
-    .card-adv   { animation-delay: 0.25s; box-shadow: var(--shadow-glow-adv); }
-    .card-chair { animation-delay: 0.35s; box-shadow: var(--shadow-glow-chair); }
-
-    .card-vis:hover   { box-shadow: 0 0 60px rgba(255,107,0,0.22); }
-    .card-prag:hover  { box-shadow: 0 0 60px rgba(0,114,255,0.22); }
-    .card-adv:hover   { box-shadow: 0 0 60px rgba(144,0,255,0.25); }
-    .card-chair:hover { box-shadow: 0 0 80px rgba(255,215,0,0.18); }
-
-    /* ── Card header stripe ─────────────────────────────────────────── */
-    .card-header {
-      padding: 20px 24px 16px;
-      border-bottom: 1px solid var(--border);
-      position: relative;
-      overflow: hidden;
-    }
-
-    /* racing stripe for Visionary */
-    .card-vis .card-header::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; height: 3px;
-      background: linear-gradient(90deg, var(--vis-2), var(--vis-1), #ffb347);
-      background-size: 200% 100%;
-      animation: racing-stripe 2s linear infinite;
-    }
-    @keyframes racing-stripe {
-      from { background-position: 0% 0; }
-      to   { background-position: 200% 0; }
-    }
-
-    .card-prag .card-header::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; height: 3px;
-      background: linear-gradient(90deg, var(--prag-2), var(--prag-1));
-    }
-
-    .card-adv .card-header::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; height: 3px;
-      background: linear-gradient(90deg, var(--adv-2), var(--adv-1));
-    }
-
-    .card-chair .card-header::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; height: 3px;
-      background: linear-gradient(90deg, var(--chair-2), var(--chair-1), #fff7aa, var(--chair-1));
-      background-size: 300% 100%;
-      animation: gold-shimmer 3s ease infinite;
-    }
-    @keyframes gold-shimmer {
-      0%   { background-position: 0% 0; }
-      50%  { background-position: 100% 0; }
-      100% { background-position: 0% 0; }
-    }
-
-    .card-member-icon { font-size: 28px; margin-bottom: 10px; }
-
-    .card-member-name {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      margin-bottom: 4px;
-    }
-    .card-vis  .card-member-name  { color: var(--vis-1); }
-    .card-prag .card-member-name  { color: var(--prag-1); }
-    .card-adv  .card-member-name  { color: #bf4fff; }
-    .card-chair .card-member-name { color: var(--chair-1); }
-
-    .card-role {
-      font-size: 17px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      color: var(--text-primary);
-    }
-
-    /* Visionary card: diagonal speed lines */
-    .card-vis .card-header::after {
-      content: '';
-      position: absolute;
-      top: 0; right: -20px; bottom: 0;
-      width: 120px;
-      background: repeating-linear-gradient(
-        -55deg,
-        transparent,
-        transparent 6px,
-        rgba(255,107,0,0.05) 6px,
-        rgba(255,107,0,0.05) 8px
-      );
-      pointer-events: none;
-    }
-
-    /* Pragmatist card: monospaced spec-sheet feel via header tint */
-    .card-prag .card-header {
-      background: rgba(0,114,255,0.03);
-    }
-
-    /* Advocate card: sharp diagonal slash */
-    .card-adv .card-header::after {
-      content: '';
-      position: absolute;
-      top: -30px; right: -10px;
-      width: 80px; height: 140px;
-      background: rgba(144,0,255,0.06);
+    .btn-sheen { position: relative; overflow: hidden; }
+    .btn-sheen::after {
+      content: ""; position: absolute; top: 0; left: -120%; width: 60%; height: 100%;
+      background: linear-gradient(120deg, transparent, rgba(255,255,255,0.18), transparent);
       transform: skewX(-20deg);
-      pointer-events: none;
+      transition: left 0.6s ease;
     }
+    .btn-sheen:hover::after { left: 130%; }
 
-    /* Chair card: full-width bottom gold glow */
-    .card-chair .card-header {
-      background: rgba(255,215,0,0.02);
-    }
-
-    /* ── Card body ─────────────────────────────────────────────────────── */
-    .card-body {
-      padding: 20px 24px 24px;
-      flex: 1;
-      overflow-y: auto;
-    }
-
-    .card-content {
-      font-size: 14px;
-      line-height: 1.8;
-      color: var(--text-secondary);
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-
-    .card-vis  .card-content { color: #d0c8c0; }
-    .card-prag .card-content { font-family: var(--font-mono); font-size: 13px; color: #aac8e8; }
-    .card-adv  .card-content { color: #d0b0e0; }
-    .card-chair .card-content { color: var(--text-primary); font-size: 15px; }
-
-    /* ── Chairperson — full-width card ─────────────────────────────── */
-    .chair-row {
-      /* spans full width below the grid */
-    }
-
-    .card-chair {
-      border-color: rgba(255,215,0,0.15);
-    }
-
-    .card-chair .card-header {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-    .chair-header-text {}
-
-    .chair-tag {
-      margin-left: auto;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: rgba(255,215,0,0.6);
-      border: 1px solid rgba(255,215,0,0.2);
-      padding: 4px 12px;
-      border-radius: 100px;
-    }
-
-    /* ── Footer ─────────────────────────────────────────────────────── */
-    .page-footer {
-      text-align: center;
-      margin-top: 64px;
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    /* ── Scrollbar styling ─────────────────────────────────────────── */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
-
+    .spin-slow { animation: spin 1.1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
-<body>
-  <div class="page-wrapper">
 
-    <!-- ── Header ────────────────────────────────────────────────────── -->
-    <header class="header">
-      <div class="header-badge">Board in Session</div>
-      <h1>Personal Board of Directors</h1>
-      <p class="header-sub">
-        Submit any idea, decision, or challenge. Four distinct AI advisors
-        will tear it apart — then hand you a battle-ready plan.
-      </p>
-      <div class="member-pills">
-        <span class="pill pill-vis">🗣 The Visionary</span>
-        <span class="pill pill-prag">🛠 The Pragmatist</span>
-        <span class="pill pill-adv">⚖️ The Devil's Advocate</span>
-        <span class="pill pill-chair">📋 The Chairperson</span>
+<body class="ambient-bg min-h-screen text-platinum font-sans antialiased">
+
+  <!-- Error / Alert Banner -->
+  <div id="alert-banner" class="hidden fixed top-0 inset-x-0 z-50 px-4 pt-4">
+    <div class="max-w-3xl mx-auto glass hairline rounded-xl px-5 py-4 flex items-start gap-3 lux-shadow"
+         style="border-color: rgba(201,178,122,0.4); background: rgba(40,33,16,0.6);">
+      <i data-lucide="alert-triangle" class="w-5 h-5 mt-0.5 text-champagne shrink-0"></i>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-champagne tracking-wide">Connection Interrupted</p>
+        <p id="alert-message" class="text-xs text-platinum/70 mt-1 leading-relaxed break-words"></p>
+      </div>
+      <button onclick="hideAlert()" class="text-platinum/40 hover:text-platinum transition-colors" aria-label="Dismiss alert">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+
+  <main class="max-w-7xl mx-auto px-5 sm:px-8 py-10 sm:py-14">
+
+    <!-- ===================== EXECUTIVE HEADER ===================== -->
+    <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 pb-8 border-b hairline-soft">
+      <div class="flex items-center gap-4">
+        <!-- Luxury logomark placeholder -->
+        <div class="relative w-12 h-12 rounded-full hairline flex items-center justify-center glass lux-shadow shrink-0">
+          <div class="absolute inset-1.5 rounded-full border border-champagne/20"></div>
+          <span class="font-serif text-lg gold-text leading-none">B</span>
+        </div>
+        <div>
+          <p class="text-[11px] uppercase tracking-[0.45em] text-champagne/70 font-medium mb-1">Private Chamber</p>
+          <h1 class="font-serif text-2xl sm:text-3xl tracking-wide text-platinum leading-none">
+            THE PERSONAL BOARD <span class="gold-text">OF DIRECTORS</span>
+          </h1>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 glass hairline-soft rounded-full px-4 py-2 self-start md:self-auto">
+        <span class="status-dot w-2 h-2 rounded-full bg-emerald-400/90"></span>
+        <span class="text-[11px] uppercase tracking-[0.25em] text-platinum/70 font-medium">Chamber Status: Active &amp; Secured</span>
       </div>
     </header>
 
-    <!-- ── Input panel ────────────────────────────────────────────────── -->
-    <section class="input-panel" id="input-panel">
-      <div class="input-tabs" role="tablist">
-        <button class="tab-btn active" id="tab-text-btn" role="tab" aria-selected="true" onclick="switchTab('text')">
-          ✏️ Text
-        </button>
-        <button class="tab-btn" id="tab-file-btn" role="tab" aria-selected="false" onclick="switchTab('file')">
-          📄 PDF Upload
-        </button>
+    <!-- ===================== STRATEGIC INPUT CONTROL ===================== -->
+    <section class="mt-10 sm:mt-12">
+      <div class="flex items-center gap-3 mb-4">
+        <i data-lucide="scroll-text" class="w-4 h-4 text-champagne/80"></i>
+        <h2 class="text-[12px] uppercase tracking-[0.35em] text-platinum/60 font-medium">Strategic Proposal</h2>
       </div>
 
-      <!-- Text tab -->
-      <div class="tab-pane active" id="pane-text">
+      <form id="board-form" class="glass hairline rounded-2xl p-5 sm:p-7 lux-shadow">
+        <label for="proposal" class="sr-only">Enter your proposal for the board</label>
         <textarea
-          id="idea-input"
-          placeholder="Describe your idea, decision, or challenge here…&#10;&#10;e.g. &quot;I want to quit my job and build an AI-powered dog-walking empire.&quot;"
-          maxlength="8000"
-          oninput="updateCharCount()"
-          aria-label="Your idea or question"
+          id="proposal"
+          rows="4"
+          placeholder="Present your proposal to the board. e.g. &quot;Should we pivot our product toward an enterprise-only model next quarter?&quot;"
+          class="focus-glow w-full resize-y bg-transparent text-platinum placeholder-platinum/30 text-base leading-relaxed font-light rounded-xl px-4 py-3 hairline-soft transition-all duration-300"
         ></textarea>
-      </div>
 
-      <!-- File tab -->
-      <div class="tab-pane" id="pane-file">
-        <div class="file-drop" id="file-drop-zone"
-          ondragover="handleDragOver(event)"
-          ondragleave="handleDragLeave(event)"
-          ondrop="handleDrop(event)"
-        >
-          <input type="file" id="pdf-upload" accept="application/pdf" onchange="handleFileSelect(event)" aria-label="Upload PDF" />
-          <div class="file-drop-icon">📁</div>
-          <div class="file-drop-label">
-            <strong>Drop your PDF here</strong><br />
-            or click to browse
-          </div>
-          <div id="file-name"></div>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-5">
+          <p class="text-[11px] text-platinum/40 tracking-wide flex items-center gap-2">
+            <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+            Deliberations are processed within the secured chamber.
+          </p>
+          <button
+            id="convene-btn"
+            type="submit"
+            class="btn-sheen group inline-flex items-center justify-center gap-3 rounded-full px-7 py-3 font-medium text-sm tracking-[0.2em] uppercase transition-all duration-300 hairline lux-shadow text-obsidian"
+            style="background: linear-gradient(180deg,#e7d6a8 0%,#c9b27a 55%,#9c7c4f 100%);"
+          >
+            <span id="btn-label" class="flex items-center gap-2">
+              <i data-lucide="gavel" class="w-4 h-4"></i> Convene the Board
+            </span>
+            <span id="btn-loading" class="hidden items-center gap-2">
+              <i data-lucide="loader-2" class="w-4 h-4 spin-slow"></i> Deliberating
+            </span>
+          </button>
         </div>
-      </div>
-
-      <div class="submit-row">
-        <span class="char-count" id="char-count">0 / 8000</span>
-        <button id="submit-btn" onclick="handleSubmit()" aria-label="Convene the Board">
-          <span class="btn-icon">⚡</span>
-          Convene the Board
-        </button>
-      </div>
+      </form>
     </section>
 
-    <!-- ── Error banner ───────────────────────────────────────────────── -->
-    <div id="error-banner" role="alert"></div>
-
-    <!-- ── Loading panel ─────────────────────────────────────────────── -->
-    <section id="loading-panel" aria-live="polite">
-      <div class="deliberating-text">The Board is deliberating…</div>
-      <div class="deliberating-sub" id="deliberating-sub">Convening members</div>
-      <div class="board-progress">
-        <div class="progress-member pm-vis" id="pm-vis">
-          <div class="pm-icon">🗣</div>
-          <div class="pm-label">Visionary</div>
-        </div>
-        <div class="progress-connector"></div>
-        <div class="progress-member pm-prag" id="pm-prag">
-          <div class="pm-icon">🛠</div>
-          <div class="pm-label">Pragmatist</div>
-        </div>
-        <div class="progress-connector"></div>
-        <div class="progress-member pm-adv" id="pm-adv">
-          <div class="pm-icon">⚖️</div>
-          <div class="pm-label">Advocate</div>
-        </div>
-        <div class="progress-connector"></div>
-        <div class="progress-member pm-chair" id="pm-chair">
-          <div class="pm-icon">📋</div>
-          <div class="pm-label">Chairperson</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ── Results panel ──────────────────────────────────────────────── -->
-    <section id="results-panel" aria-live="polite">
-      <div class="results-header">
-        <div class="results-title">📋 Board Report</div>
-        <div class="results-meta" id="results-meta"></div>
+    <!-- ===================== THE DIRECTORS' CHAMBER (GRID) ===================== -->
+    <section class="mt-12">
+      <div class="flex items-center gap-3 mb-6">
+        <i data-lucide="users" class="w-4 h-4 text-champagne/80"></i>
+        <h2 class="text-[12px] uppercase tracking-[0.35em] text-platinum/60 font-medium">The Directors' Chamber</h2>
+        <div class="flex-1 h-px bg-gradient-to-r from-champagne/20 to-transparent"></div>
       </div>
 
-      <!-- Three analyst cards -->
-      <div class="cards-grid">
-        <!-- Visionary -->
-        <article class="board-card card-vis" id="card-vis">
-          <div class="card-header">
-            <div class="card-member-icon">🗣</div>
-            <div class="card-member-name">Member 01</div>
-            <div class="card-role">The Visionary</div>
-          </div>
-          <div class="card-body">
-            <div class="card-content" id="content-vis"></div>
-          </div>
-        </article>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-        <!-- Pragmatist -->
-        <article class="board-card card-prag" id="card-prag">
-          <div class="card-header">
-            <div class="card-member-icon">🛠</div>
-            <div class="card-member-name">Member 02</div>
-            <div class="card-role">The Pragmatist</div>
-          </div>
-          <div class="card-body">
-            <div class="card-content" id="content-prag"></div>
-          </div>
-        </article>
-
-        <!-- Devil's Advocate -->
-        <article class="board-card card-adv" id="card-adv">
-          <div class="card-header">
-            <div class="card-member-icon">⚖️</div>
-            <div class="card-member-name">Member 03</div>
-            <div class="card-role">The Devil's Advocate</div>
-          </div>
-          <div class="card-body">
-            <div class="card-content" id="content-adv"></div>
-          </div>
-        </article>
-      </div>
-
-      <!-- Chairperson — full width -->
-      <div class="chair-row">
-        <article class="board-card card-chair" id="card-chair">
-          <div class="card-header">
-            <div>
-              <div class="card-member-icon">📋</div>
-              <div class="card-member-name">Chairperson</div>
-              <div class="card-role">Board Resolution</div>
+        <!-- 1. THE ENTHUSIAST / VISIONARY -->
+        <article class="carbon hairline rounded-2xl overflow-hidden lux-shadow flex flex-col">
+          <div class="px-5 py-4 flex items-center justify-between border-b" style="border-color: rgba(183,28,43,0.35);">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: rgba(183,28,43,0.15); border:1px solid rgba(183,28,43,0.4);">
+                <i data-lucide="gauge" class="w-4 h-4" style="color:#e0606c;"></i>
+              </div>
+              <div>
+                <h3 class="font-serif text-lg text-platinum leading-none">The Visionary</h3>
+                <p class="text-[10px] uppercase tracking-[0.3em] mt-1" style="color:#e0606c;">The Enthusiast</p>
+              </div>
             </div>
-            <div class="chair-tag">⚡ Final Directive</div>
+            <span class="text-[9px] font-mono uppercase tracking-widest text-platinum/30">NODE&nbsp;01</span>
           </div>
-          <div class="card-body">
-            <div class="card-content" id="content-chair"></div>
+
+          <!-- micro telemetry strip -->
+          <div class="grid grid-cols-3 divide-x text-center text-[9px] font-mono uppercase tracking-widest text-platinum/40" style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <div class="py-2" style="border-color:rgba(255,255,255,0.05);">MOMENTUM</div>
+            <div class="py-2" style="border-color:rgba(255,255,255,0.05);">UPSIDE</div>
+            <div class="py-2" style="border-color:rgba(255,255,255,0.05);">VELOCITY</div>
+          </div>
+
+          <div class="p-5 flex-1">
+            <div data-skeleton class="space-y-3 hidden">
+              <div class="shimmer h-3 w-5/6"></div>
+              <div class="shimmer h-3 w-full"></div>
+              <div class="shimmer h-3 w-2/3"></div>
+              <div class="shimmer h-3 w-3/4"></div>
+            </div>
+            <p data-content class="text-sm leading-relaxed text-platinum/80 font-light">
+              <span class="text-platinum/30 italic">Awaiting the board's convening…</span>
+            </p>
           </div>
         </article>
+
+        <!-- 2. THE TECHNICAL PEDANT / PRAGMATIST -->
+        <article class="eng-grid hairline-soft rounded-2xl overflow-hidden lux-shadow flex flex-col" style="border-color: rgba(160,168,180,0.18);">
+          <div class="px-5 py-4 flex items-center justify-between border-b" style="border-color: rgba(160,168,180,0.18);">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-md flex items-center justify-center" style="background: rgba(160,168,180,0.08); border:1px solid rgba(160,168,180,0.3);">
+                <i data-lucide="cog" class="w-4 h-4 text-slate-300"></i>
+              </div>
+              <div>
+                <h3 class="font-serif text-lg text-platinum leading-none">The Pragmatist</h3>
+                <p class="text-[10px] uppercase tracking-[0.3em] mt-1 text-slate-400">The Technical Pedant</p>
+              </div>
+            </div>
+            <span class="text-[9px] font-mono uppercase tracking-widest text-platinum/30">NODE&nbsp;02</span>
+          </div>
+
+          <!-- alignment ticks -->
+          <div class="flex items-stretch h-5 px-5 gap-1 border-b" style="border-color: rgba(160,168,180,0.12);">
+            <div class="flex-1 flex items-end gap-1">
+              <span class="w-px h-3 bg-slate-500/40"></span>
+              <span class="w-px h-2 bg-slate-500/25"></span>
+              <span class="w-px h-2 bg-slate-500/25"></span>
+              <span class="w-px h-2 bg-slate-500/25"></span>
+              <span class="w-px h-3 bg-slate-500/40"></span>
+              <span class="w-px h-2 bg-slate-500/25"></span>
+              <span class="w-px h-2 bg-slate-500/25"></span>
+              <span class="w-px h-2 bg-slate-500/25"></span>
+              <span class="w-px h-3 bg-slate-500/40"></span>
+            </div>
+            <span class="text-[8px] font-mono self-center text-slate-500 tracking-widest">SPEC&nbsp;0.1mm</span>
+          </div>
+
+          <div class="p-5 flex-1">
+            <div data-skeleton class="space-y-3 hidden">
+              <div class="shimmer h-3 w-full"></div>
+              <div class="shimmer h-3 w-11/12"></div>
+              <div class="shimmer h-3 w-3/4"></div>
+              <div class="shimmer h-3 w-5/6"></div>
+            </div>
+            <p data-content class="text-sm leading-relaxed text-platinum/80 font-light font-mono">
+              <span class="text-platinum/30 italic">// awaiting specification input…</span>
+            </p>
+          </div>
+        </article>
+
+        <!-- 3. THE BLUNT CYNIC / DEVIL'S ADVOCATE -->
+        <article class="matte rounded-none lg:rounded-sm overflow-hidden flex flex-col" style="border: 3px solid #2a2326;">
+          <div class="px-5 py-4 flex items-center justify-between" style="background:#0e0c0d; border-bottom:3px solid #2a2326;">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 flex items-center justify-center" style="background:#3a1118; border:2px solid #5a1f28;">
+                <i data-lucide="shield-alert" class="w-4 h-4" style="color:#b46b78;"></i>
+              </div>
+              <div>
+                <h3 class="font-serif text-lg text-platinum leading-none">Devil&apos;s Advocate</h3>
+                <p class="text-[10px] uppercase tracking-[0.3em] mt-1" style="color:#b46b78;">The Blunt Cynic</p>
+              </div>
+            </div>
+            <span class="text-[9px] font-mono uppercase tracking-widest text-platinum/30">NODE&nbsp;03</span>
+          </div>
+
+          <div class="p-5 flex-1" style="background:#0b0a0b;">
+            <div data-skeleton class="space-y-3 hidden">
+              <div class="shimmer h-3 w-full" style="border-radius:0;"></div>
+              <div class="shimmer h-3 w-4/5" style="border-radius:0;"></div>
+              <div class="shimmer h-3 w-full" style="border-radius:0;"></div>
+              <div class="shimmer h-3 w-2/3" style="border-radius:0;"></div>
+            </div>
+            <p data-content class="text-sm leading-relaxed text-platinum/80 font-medium">
+              <span class="text-platinum/30 italic">No objections filed. The floor is closed.</span>
+            </p>
+          </div>
+        </article>
+
       </div>
     </section>
 
-    <footer class="page-footer">
-      Powered by LangGraph · Google Gemini 2.5 Flash · Built with FastAPI
+    <!-- ===================== EXECUTIVE RESOLUTION ROOM ===================== -->
+    <section class="mt-6">
+      <div class="glass hairline rounded-2xl lux-shadow overflow-hidden">
+        <!-- document header -->
+        <div class="px-7 sm:px-12 pt-10 pb-6 text-center border-b hairline-soft">
+          <p class="text-[11px] uppercase tracking-[0.5em] text-champagne/70 mb-3">Office of the Board</p>
+          <h2 class="font-serif text-3xl sm:text-4xl text-platinum tracking-wide">Executive Resolution</h2>
+          <div class="flex items-center justify-center gap-4 mt-5">
+            <span class="h-px w-16 bg-champagne/30"></span>
+            <i data-lucide="landmark" class="w-4 h-4 text-champagne/60"></i>
+            <span class="h-px w-16 bg-champagne/30"></span>
+          </div>
+        </div>
+
+        <!-- document body -->
+        <div class="px-7 sm:px-16 py-10 sm:py-12">
+          <div id="resolution-skeleton" data-skeleton class="space-y-4 hidden max-w-3xl mx-auto">
+            <div class="shimmer h-4 w-full"></div>
+            <div class="shimmer h-4 w-11/12"></div>
+            <div class="shimmer h-4 w-full"></div>
+            <div class="shimmer h-4 w-10/12"></div>
+            <div class="shimmer h-4 w-3/4"></div>
+          </div>
+
+          <div id="resolution-content" class="max-w-3xl mx-auto">
+            <p class="font-serif text-lg sm:text-xl leading-loose text-platinum/85 text-pretty first-letter:font-serif first-letter:text-5xl first-letter:text-champagne first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:leading-none">
+              The chamber stands ready. Present a proposal above and convene the board to receive the formal executive resolution, deliberated across the perspectives of the Visionary, the Pragmatist, and the Devil&apos;s Advocate.
+            </p>
+          </div>
+
+          <!-- signature divider -->
+          <div class="mt-12 pt-6 max-w-3xl mx-auto">
+            <div class="h-px w-full bg-gradient-to-r from-transparent via-champagne/40 to-transparent"></div>
+            <div class="flex items-center justify-between mt-4">
+              <p class="font-serif italic text-platinum/50 text-sm">Ratified by The Personal Board of Directors</p>
+              <p class="text-[10px] font-mono uppercase tracking-widest text-platinum/30" id="seal-date"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="mt-10 text-center">
+      <p class="text-[10px] uppercase tracking-[0.35em] text-platinum/25">Confidential — For Board Members Only</p>
     </footer>
-  </div>
 
-  <!-- ── JavaScript ──────────────────────────────────────────────────── -->
+  </main>
+
   <script>
-    const API_URL = 'http://localhost:8000/api/debate';
+    // Render Lucide icons
+    lucide.createIcons();
 
-    // ── State ──────────────────────────────────────────────────────────
-    let activeTab = 'text';
-    let selectedFile = null;
-    let progressTimer = null;
+    // Stamp the seal date
+    document.getElementById('seal-date').textContent =
+      new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
 
-    // ── Tab switching ──────────────────────────────────────────────────
-    function switchTab(tab) {
-      activeTab = tab;
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-      document.getElementById(`tab-${tab}-btn`).classList.add('active');
-      document.getElementById(`pane-${tab}`).classList.add('active');
-      hideError();
+    const form = document.getElementById('board-form');
+    const textarea = document.getElementById('proposal');
+    const btn = document.getElementById('convene-btn');
+    const btnLabel = document.getElementById('btn-label');
+    const btnLoading = document.getElementById('btn-loading');
+
+    const cards = {
+      visionary:  document.querySelectorAll('article')[0],
+      pragmatist: document.querySelectorAll('article')[1],
+      advocate:   document.querySelectorAll('article')[2],
+    };
+    const resolutionSkeleton = document.getElementById('resolution-skeleton');
+    const resolutionContent = document.getElementById('resolution-content');
+    const alertBanner = document.getElementById('alert-banner');
+    const alertMessage = document.getElementById('alert-message');
+
+    function showAlert(message) {
+      alertMessage.textContent = message;
+      alertBanner.classList.remove('hidden');
+      lucide.createIcons();
     }
-
-    // ── Char counter ───────────────────────────────────────────────────
-    function updateCharCount() {
-      const val = document.getElementById('idea-input').value.length;
-      document.getElementById('char-count').textContent = `${val.toLocaleString()} / 8,000`;
+    function hideAlert() {
+      alertBanner.classList.add('hidden');
     }
+    window.hideAlert = hideAlert;
 
-    // ── File handling ──────────────────────────────────────────────────
-    function handleFileSelect(e) {
-      const file = e.target.files[0];
-      if (file) setFile(file);
-    }
-
-    function setFile(file) {
-      if (file.type !== 'application/pdf') {
-        showError('Please select a PDF file.');
-        selectedFile = null;
-        document.getElementById('file-name').textContent = '';
-        return;
+    function setLoading(isLoading) {
+      if (isLoading) {
+        btn.setAttribute('disabled', 'true');
+        btn.classList.add('opacity-80', 'cursor-not-allowed');
+        btnLabel.classList.add('hidden');
+        btnLoading.classList.remove('hidden');
+        btnLoading.classList.add('flex');
+      } else {
+        btn.removeAttribute('disabled');
+        btn.classList.remove('opacity-80', 'cursor-not-allowed');
+        btnLoading.classList.add('hidden');
+        btnLoading.classList.remove('flex');
+        btnLabel.classList.remove('hidden');
       }
-      selectedFile = file;
-      document.getElementById('file-name').textContent = `✅ ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-      hideError();
     }
 
-    function handleDragOver(e) {
-      e.preventDefault();
-      document.getElementById('file-drop-zone').classList.add('dragover');
-    }
-
-    function handleDragLeave(e) {
-      document.getElementById('file-drop-zone').classList.remove('dragover');
-    }
-
-    function handleDrop(e) {
-      e.preventDefault();
-      document.getElementById('file-drop-zone').classList.remove('dragover');
-      const file = e.dataTransfer.files[0];
-      if (file) setFile(file);
-    }
-
-    // ── Error display ──────────────────────────────────────────────────
-    function showError(msg) {
-      const el = document.getElementById('error-banner');
-      el.textContent = `⚠️ ${msg}`;
-      el.style.display = 'block';
-    }
-
-    function hideError() {
-      document.getElementById('error-banner').style.display = 'none';
-    }
-
-    // ── Loading animation ──────────────────────────────────────────────
-    const stages = [
-      { id: 'pm-vis',   label: 'The Visionary is thinking…' },
-      { id: 'pm-prag',  label: 'The Pragmatist is running the numbers…' },
-      { id: 'pm-adv',   label: 'The Devil\'s Advocate is hunting for flaws…' },
-      { id: 'pm-chair', label: 'The Chairperson is drafting the resolution…' },
-    ];
-
-    function startLoadingAnimation() {
-      let stage = 0;
-      const sub = document.getElementById('deliberating-sub');
-
-      function advanceStage() {
-        document.querySelectorAll('.progress-member').forEach(el => el.classList.remove('active'));
-        if (stage < stages.length) {
-          document.getElementById(stages[stage].id).classList.add('active');
-          sub.textContent = stages[stage].label;
-          stage++;
-          progressTimer = setTimeout(advanceStage, 18000 / stages.length);
+    // Toggle skeleton vs content in the three persona cards
+    function setCardsLoading(isLoading) {
+      Object.values(cards).forEach((card) => {
+        const skeleton = card.querySelector('[data-skeleton]');
+        const content = card.querySelector('[data-content]');
+        if (isLoading) {
+          skeleton.classList.remove('hidden');
+          content.classList.add('hidden');
+        } else {
+          skeleton.classList.add('hidden');
+          content.classList.remove('hidden');
         }
+      });
+      // Resolution panel
+      if (isLoading) {
+        resolutionSkeleton.classList.remove('hidden');
+        resolutionContent.classList.add('hidden');
+      } else {
+        resolutionSkeleton.classList.add('hidden');
+        resolutionContent.classList.remove('hidden');
       }
-      advanceStage();
     }
 
-    function stopLoadingAnimation() {
-      clearTimeout(progressTimer);
-      document.querySelectorAll('.progress-member').forEach(el => el.classList.remove('active'));
+    function setCardContent(card, text, fallback) {
+      const content = card.querySelector('[data-content]');
+      content.classList.add('fade-in');
+      content.textContent = (text && String(text).trim()) ? text : fallback;
+      // retrigger animation
+      content.style.animation = 'none';
+      void content.offsetWidth;
+      content.style.animation = '';
     }
 
-    // ── Main submit handler ────────────────────────────────────────────
-    async function handleSubmit() {
-      hideError();
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert();
 
-      // Validate input
-      const text = document.getElementById('idea-input').value.trim();
-      if (activeTab === 'text' && !text) {
-        showError('Please enter your idea before convening the Board.');
-        return;
-      }
-      if (activeTab === 'file' && !selectedFile) {
-        showError('Please select a PDF file before convening the Board.');
+      const text = textarea.value.trim();
+      if (!text) {
+        showAlert('Please enter a proposal before convening the board.');
+        textarea.focus();
         return;
       }
 
-      // UI: enter loading state
-      document.getElementById('submit-btn').disabled = true;
-      document.getElementById('results-panel').style.display = 'none';
-      document.getElementById('loading-panel').style.display = 'block';
-      startLoadingAnimation();
-
-      const startTime = Date.now();
+      setLoading(true);
+      setCardsLoading(true);
 
       try {
-        // Build form data
-        const formData = new FormData();
-        if (activeTab === 'file' && selectedFile) {
-          formData.append('file', selectedFile);
-        } else {
-          formData.append('text', text);
-        }
-
-        const response = await fetch(API_URL, {
+        const response = await fetch('http://localhost:8000/api/debate', {
           method: 'POST',
-          body: formData,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_input: text }),
         });
 
         if (!response.ok) {
-          const err = await response.json().catch(() => ({ detail: response.statusText }));
-          throw new Error(err.detail || `Server error: ${response.status}`);
+          throw new Error('The chamber returned status ' + response.status + ' (' + response.statusText + ').');
         }
 
         const data = await response.json();
-        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
-        // Populate cards
-        document.getElementById('content-vis').textContent   = data.visionary  || '—';
-        document.getElementById('content-prag').textContent  = data.pragmatist || '—';
-        document.getElementById('content-adv').textContent   = data.advocate   || '—';
-        document.getElementById('content-chair').textContent = data.resolution || '—';
+        setCardsLoading(false);
 
-        // Set metadata
-        const topic = activeTab === 'file'
-          ? `PDF: ${selectedFile.name}`
-          : `"${text.slice(0, 60)}${text.length > 60 ? '…' : ''}"`;
-        document.getElementById('results-meta').textContent =
-          `Deliberation time: ${elapsed}s · Topic: ${topic}`;
+        setCardContent(cards.visionary,  data.visionary,  'The Visionary offered no remarks.');
+        setCardContent(cards.pragmatist, data.pragmatist, '// The Pragmatist offered no remarks.');
+        setCardContent(cards.advocate,   data.advocate,   'The Devil\u2019s Advocate raised no objections.');
 
-        // Show results
-        document.getElementById('results-panel').style.display = 'block';
-        document.getElementById('results-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Executive resolution
+        resolutionContent.innerHTML = '';
+        const p = document.createElement('p');
+        p.className = 'font-serif text-lg sm:text-xl leading-loose text-platinum/90 text-pretty fade-in ' +
+          'first-letter:font-serif first-letter:text-5xl first-letter:text-champagne first-letter:float-left ' +
+          'first-letter:mr-3 first-letter:mt-1 first-letter:leading-none';
+        p.textContent = (data.resolution && String(data.resolution).trim())
+          ? data.resolution
+          : 'The board reached no formal resolution on this matter.';
+        resolutionContent.appendChild(p);
 
       } catch (err) {
-        showError(err.message || 'Something went wrong. Is the server running on port 8000?');
-      } finally {
-        stopLoadingAnimation();
-        document.getElementById('loading-panel').style.display = 'none';
-        document.getElementById('submit-btn').disabled = false;
-      }
-    }
+        setLoading(false);
+        setCardsLoading(false);
 
-    // Allow Ctrl+Enter to submit from the textarea
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('idea-input').addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') handleSubmit();
-      });
+        // Restore placeholder states gracefully
+        const msg = (err && err.message) ? err.message : 'An unknown error occurred.';
+        let detail = msg;
+        if (msg.includes('Failed to fetch') || err.name === 'TypeError') {
+          detail = 'Unable to reach the deliberation server at http://localhost:8000/api/debate. ' +
+                   'Confirm the chamber backend is running and accessible.';
+        }
+        showAlert(detail);
+        return;
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    // Keyboard convenience: Cmd/Ctrl + Enter submits
+    textarea.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        form.requestSubmit();
+      }
     });
   </script>
 </body>

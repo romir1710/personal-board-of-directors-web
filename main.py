@@ -2,8 +2,11 @@
 main.py — FastAPI web server entry point for the Personal Board of Directors.
 
 Endpoints:
-  POST /api/debate   — accepts text OR a PDF file, runs the LangGraph board,
-                       returns the four node outputs as JSON.
+  POST /api/debate   — accepts any of the following, auto-detected via Content-Type:
+                         • application/json          → { "user_input": "..." }
+                         • multipart/form-data       → text field  OR  PDF file upload
+                         • application/x-www-form-urlencoded → text field
+                       Returns the four node outputs as JSON.
 
 Run with:
   uvicorn main:app --reload --port 8000
@@ -17,7 +20,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -85,16 +88,14 @@ async def serve_frontend():
 
 
 @app.post("/api/debate")
-async def debate(
-    text: str | None = Form(default=None),
-    file: UploadFile | None = File(default=None),
-):
+async def debate(request: Request):
     """
     Run the Board of Directors on the submitted idea.
 
-    Accepts (multipart/form-data):
-      • text  — plain string input
-      • file  — a PDF file (takes precedence over text if both are sent)
+    Auto-detects the Content-Type and accepts:
+      • application/json                 → { "user_input": "..." }
+      • multipart/form-data              → 'text' field  OR  'file' PDF upload
+      • application/x-www-form-urlencoded → 'text' field
 
     Returns JSON:
       {
@@ -104,50 +105,79 @@ async def debate(
         "resolution": "..."
       }
     """
+    content_type: str = request.headers.get("content-type", "")
     user_input: str = ""
 
-    # ── PDF path ───────────────────────────────────────────────────────────────
-    if file is not None and file.filename:
-        if file.content_type != "application/pdf":
+    # ── JSON body (sent by the web frontend) ───────────────────────────────────
+    if "application/json" in content_type:
+        try:
+            body = await request.json()
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid JSON body.")
+
+        user_input = str(body.get("user_input", "")).strip()
+        if not user_input:
             raise HTTPException(
                 status_code=400,
-                detail="Only PDF files are supported. Please upload a .pdf file.",
+                detail="JSON body must include a non-empty 'user_input' field.",
             )
 
-        # Write to a temp file so pypdf can read it
-        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-            tmp_path = Path(tmp.name)
-            content = await file.read()
-            tmp.write(content)
+    # ── Multipart form-data OR url-encoded form (PDF upload or text field) ──────
+    elif "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
+        form = await request.form()
+        file: UploadFile | None = form.get("file")  # type: ignore[assignment]
+        text: str | None = form.get("text")  # type: ignore[assignment]
 
-        try:
-            pdf_text = extract_text_from_pdf(tmp_path)
-            user_input = (
-                f"[The following is extracted from an uploaded PDF: '{file.filename}']\n\n"
-                f"{pdf_text}"
-            )
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc))
-        except Exception as exc:
-            logger.exception("Failed to parse PDF: %s", file.filename)
-            raise HTTPException(status_code=500, detail=f"PDF parsing failed: {exc}")
-        finally:
+        if file is not None and getattr(file, "filename", None):
+            # ── PDF upload ─────────────────────────────────────────────────────
+            if file.content_type != "application/pdf":
+                raise HTTPException(
+                    status_code=400,
+                    detail="Only PDF files are supported. Please upload a .pdf file.",
+                )
+
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                tmp_path = Path(tmp.name)
+                tmp.write(await file.read())
+
             try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
+                pdf_text = extract_text_from_pdf(tmp_path)
+                user_input = (
+                    f"[The following is extracted from an uploaded PDF: '{file.filename}']\n\n"
+                    f"{pdf_text}"
+                )
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc))
+            except Exception as exc:
+                logger.exception("Failed to parse PDF: %s", file.filename)
+                raise HTTPException(status_code=500, detail=f"PDF parsing failed: {exc}")
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
 
-    # ── Text path ──────────────────────────────────────────────────────────────
-    elif text and text.strip():
-        user_input = text.strip()
+        elif text and str(text).strip():
+            # ── Plain text field ───────────────────────────────────────────────
+            user_input = str(text).strip()
+
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Please provide either a 'text' field or a PDF file upload.",
+            )
 
     else:
         raise HTTPException(
-            status_code=400,
-            detail="Please provide either a 'text' field or a PDF file upload.",
+            status_code=415,
+            detail=(
+                "Unsupported Media Type. Send either "
+                "'application/json', 'multipart/form-data', or "
+                "'application/x-www-form-urlencoded'."
+            ),
         )
 
-    # ── Run the board ──────────────────────────────────────────────────────────
+    # ── Run the board (common path) ────────────────────────────────────────────
     try:
         logger.info("Convening the Board for input (%d chars)…", len(user_input))
         result = await _run_board(user_input)
