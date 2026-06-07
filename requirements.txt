@@ -1,0 +1,24 @@
+# Web dependencies — Personal Board of Directors (Web Version)
+# Install with: pip install -r requirements.txt
+
+# ── Web framework ─────────────────────────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+
+# ── Form / file upload support ────────────────────────────────────────────────
+python-multipart>=0.0.9
+
+# ── Static file serving ───────────────────────────────────────────────────────
+aiofiles>=23.0.0
+
+# ── LangGraph / LangChain ─────────────────────────────────────────────────────
+langgraph>=0.2.0
+langchain-core>=0.3.0
+langchain-google-genai>=2.0.0
+langchain-openai>=0.2.0
+
+# ── PDF parsing ───────────────────────────────────────────────────────────────
+pypdf>=4.0.0
+
+# ── Env management ────────────────────────────────────────────────────────────
+python-dotenv>=1.0.0
