@@ -17,6 +17,10 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from dotenv import load_dotenv
+
+# Force load the environment variables from your local .env file
+load_dotenv()
 import tempfile
 from pathlib import Path
 
