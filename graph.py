@@ -16,6 +16,7 @@ independence.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TypedDict
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -58,24 +59,56 @@ def _invoke(system_prompt: str, user_message: str) -> str:
 
 def visionary_node(state: BoardState) -> dict:
     """The Visionary — ambition, scale, creative potential."""
-    response = _invoke(VISIONARY_SYSTEM_PROMPT, state["user_input"])
+    current_date = datetime.now().strftime("%B %d, %Y")
+    dated_prompt = (
+        f"CRITICAL CONTEXT: The current real-world date is exactly {current_date}. "
+        f"All project timelines, academic years, and resume dates must be evaluated "
+        f"relative to this date. Anything dated on or before {current_date} is in the "
+        f"past or present — do NOT treat it as a future event or hallucination.\n\n"
+        + VISIONARY_SYSTEM_PROMPT
+    )
+    response = _invoke(dated_prompt, state["user_input"])
     return {"visionary_response": response}
 
 
 def pragmatist_node(state: BoardState) -> dict:
     """The Pragmatist — logistics, time, budget, grounded reality."""
-    response = _invoke(PRAGMATIST_SYSTEM_PROMPT, state["user_input"])
+    current_date = datetime.now().strftime("%B %d, %Y")
+    dated_prompt = (
+        f"CRITICAL CONTEXT: The current real-world date is exactly {current_date}. "
+        f"All project timelines, academic years, and resume dates must be evaluated "
+        f"relative to this date. Anything dated on or before {current_date} is in the "
+        f"past or present — do NOT treat it as a future event or hallucination.\n\n"
+        + PRAGMATIST_SYSTEM_PROMPT
+    )
+    response = _invoke(dated_prompt, state["user_input"])
     return {"pragmatist_response": response}
 
 
 def advocate_node(state: BoardState) -> dict:
     """The Devil's Advocate — flaws, risks, blind spots."""
-    response = _invoke(DEVIL_ADVOCATE_SYSTEM_PROMPT, state["user_input"])
+    current_date = datetime.now().strftime("%B %d, %Y")
+    dated_prompt = (
+        f"CRITICAL CONTEXT: The current real-world date is exactly {current_date}. "
+        f"All project timelines, academic years, and resume dates must be evaluated "
+        f"relative to this date. Anything dated on or before {current_date} is in the "
+        f"past or present — do NOT treat it as a future event or hallucination.\n\n"
+        + DEVIL_ADVOCATE_SYSTEM_PROMPT
+    )
+    response = _invoke(dated_prompt, state["user_input"])
     return {"advocate_response": response}
 
 
 def chairperson_node(state: BoardState) -> dict:
     """The Chairperson — synthesises all three into the final Board Resolution."""
+    current_date = datetime.now().strftime("%B %d, %Y")
+    dated_prompt = (
+        f"CRITICAL CONTEXT: The current real-world date is exactly {current_date}. "
+        f"All project timelines, academic years, and resume dates must be evaluated "
+        f"relative to this date. Anything dated on or before {current_date} is in the "
+        f"past or present — do NOT treat it as a future event or hallucination.\n\n"
+        + CHAIRPERSON_SYSTEM_PROMPT
+    )
     synthesis_prompt = (
         f"The user submitted the following for Board review:\n\n"
         f'"""\n{state["user_input"]}\n"""\n\n'
@@ -85,7 +118,7 @@ def chairperson_node(state: BoardState) -> dict:
         f"--- THE DEVIL'S ADVOCATE ---\n{state['advocate_response']}\n\n"
         f"Now deliver the final Board Resolution."
     )
-    response = _invoke(CHAIRPERSON_SYSTEM_PROMPT, synthesis_prompt)
+    response = _invoke(dated_prompt, synthesis_prompt)
     return {"final_resolution": response}
 
 

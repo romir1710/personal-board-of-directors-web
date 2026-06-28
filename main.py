@@ -146,10 +146,18 @@ async def debate(request: Request):
 
             try:
                 pdf_text = extract_text_from_pdf(tmp_path)
-                user_input = (
-                    f"[The following is extracted from an uploaded PDF: '{file.filename}']\n\n"
-                    f"{pdf_text}"
-                )
+                # Combine typed text + PDF if both were submitted together
+                if text and str(text).strip():
+                    user_input = (
+                        f"{str(text).strip()}\n\n"
+                        f"[The following is extracted from an attached PDF: '{file.filename}']\n\n"
+                        f"{pdf_text}"
+                    )
+                else:
+                    user_input = (
+                        f"[The following is extracted from an uploaded PDF: '{file.filename}']\n\n"
+                        f"{pdf_text}"
+                    )
             except ValueError as exc:
                 raise HTTPException(status_code=422, detail=str(exc))
             except Exception as exc:
