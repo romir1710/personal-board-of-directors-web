@@ -382,7 +382,7 @@
         </div>
         <!-- Character cards (populated by JS) -->
         <div id="carousel-item-0" class="carousel-item">
-          <img src="/static/rh1.webp" alt="The Visionary" draggable="false" />
+          <img src="./rh1.webp" alt="The Visionary" draggable="false" />
           <div class="char-label pb-1">
             <p class="text-[10px] font-mono uppercase tracking-[0.35em] text-champagne/60 mb-0.5">Node 01</p>
             <p class="font-serif text-base text-platinum leading-none">The Visionary</p>
@@ -390,7 +390,7 @@
           </div>
         </div>
         <div id="carousel-item-1" class="carousel-item">
-          <img src="/static/jm1.webp" alt="The Pragmatist" draggable="false" />
+          <img src="./jm1.webp" alt="The Pragmatist" draggable="false" />
           <div class="char-label pb-1">
             <p class="text-[10px] font-mono uppercase tracking-[0.35em] text-champagne/60 mb-0.5">Node 02</p>
             <p class="font-serif text-base text-platinum leading-none">The Pragmatist</p>
@@ -398,7 +398,7 @@
           </div>
         </div>
         <div id="carousel-item-2" class="carousel-item">
-          <img src="/static/jc1.webp" alt="Devil's Advocate" draggable="false" />
+          <img src="./jc1.webp" alt="Devil's Advocate" draggable="false" />
           <div class="char-label pb-1">
             <p class="text-[10px] font-mono uppercase tracking-[0.35em] text-champagne/60 mb-0.5">Node 03</p>
             <p class="font-serif text-base text-platinum leading-none">Devil's Advocate</p>
@@ -729,8 +729,8 @@
         if (text) {
           formData.append('text', text);
         }
-        // ── !! REPLACED URL !! — Paste your Render backend URL below once deployed ──
-        const response = await fetch('https://personal-board-of-directors.onrender.com', {
+        // ── Backend API endpoint — replace hostname if your Render URL changes ──
+        const response = await fetch('https://personal-board-of-directors.onrender.com/api/debate', {
           method: 'POST',
           // Do NOT set Content-Type — browser sets it automatically with the correct boundary
           body: formData,
