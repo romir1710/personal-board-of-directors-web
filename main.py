@@ -29,24 +29,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from fastapi.middleware.cors import CORSMiddleware
-
-# ... your other imports ...
-
-app = FastAPI()
-
-# The Secure CORS Implementation
-app.add_middleware(
-    CORSMiddleware,
-    # ONLY allow your specific Vercel domain to access this API
-    allow_origins=["https://personal-board-of-directors-web.vercel.app"], 
-    allow_credentials=True,
-    allow_methods=["*"],  # Allows standard POST, GET, OPTIONS
-    allow_headers=["*"],
-)
-
-# ... the rest of your code ...
-
 import config  # noqa: F401 — triggers .env loading & LangSmith setup
 from graph import board_graph
 from pdf_utils import extract_text_from_pdf
@@ -67,7 +49,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://personal-board-of-directors-web.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
