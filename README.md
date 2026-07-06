@@ -36,7 +36,7 @@ personal-board-of-directors-web/
 
 ---
 
-## 🚀 Quick Start (You may of course just use the Live Link to directly access the Web App, although assuming you would like to run it locally, here's how):
+## 🚀 Quick Start (You may of course just use the Live Link from the "About" section to directly access the Web App, although assuming you would like to run it locally, here's how):
 
 ### 1. Prerequisites
 
