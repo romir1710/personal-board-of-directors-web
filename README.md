@@ -111,19 +111,6 @@ Interactive docs available at **[http://localhost:8000/docs](http://localhost:80
 
 ---
 
-## 🔧 Configuration Reference
-
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `GOOGLE_API_KEY` | ✅ | — | Google AI Studio key |
-| `LLM_PROVIDER` | ❌ | `gemini` | `gemini` or `openrouter` |
-| `GEMINI_MODEL` | ❌ | `gemini-2.5-flash` | Gemini model name |
-| `OPENROUTER_API_KEY` | ❌* | — | *Required if `LLM_PROVIDER=openrouter` |
-| `OPENROUTER_MODEL` | ❌ | `meta-llama/llama-3.3-70b-instruct:free` | OpenRouter model |
-| `LANGSMITH_API_KEY` | ❌ | — | Enables LangSmith tracing |
-| `LANGSMITH_TRACING` | ❌ | `false` | Set `true` to enable |
-
----
 
 ## 📄 PDF Support
 
