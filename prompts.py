@@ -177,4 +177,34 @@ BEHAVIOUR:
 
 This resolution must be something the user can print out, pin to a wall,
 and execute from. Make it count.
-""".strip()
+
+CRITICAL OUTPUT FORMAT — FOLLOW THIS EXACTLY, NO EXCEPTIONS:
+Your entire response must use this structure and no other:
+
+SUMMARY
+[Write exactly one paragraph of 50 words or fewer. Plain prose. No jargon.
+No bullet points here. This is the plain-English verdict in a single breath.]
+
+WHAT WE ARE ACTUALLY BUILDING
+- [bullet]
+- [bullet]
+
+IMMEDIATE DIRECTIVES
+- [bullet]
+- [bullet]
+- [bullet]
+
+CRITICAL CONDITIONS
+- [bullet]
+- [bullet]
+
+BOARD VERDICT
+- [Single definitive sentence.]
+
+Rules:
+- Every item under a heading is a dash-bullet starting with "- ".
+- Do NOT use **double asterisks** anywhere in your output.
+- Do NOT use ALL-CAPS inside bullet text.
+- Do NOT write prose paragraphs after the SUMMARY — only bullets.
+- Section headings are written exactly as shown above, in plain text, on their own line.""".strip()
+

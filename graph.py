@@ -34,6 +34,7 @@ from prompts import (
 
 class BoardState(TypedDict):
     user_input: str
+    conversation_history: str   # accumulated prior turns, empty string on first question
     visionary_response: str
     pragmatist_response: str
     advocate_response: str
@@ -55,6 +56,24 @@ def _invoke(system_prompt: str, user_message: str) -> str:
     return str(response.content).strip()
 
 
+def _build_user_message(state: BoardState) -> str:
+    """
+    Prepend conversation history to the current user_input so every node
+    has full session context. On the first question history is empty so
+    this is a no-op.
+    """
+    history = (state.get("conversation_history") or "").strip()
+    current = state["user_input"].strip()
+    if history:
+        return (
+            f"[CONVERSATION HISTORY — earlier turns in this session]\n"
+            f"{history}\n\n"
+            f"[NEW QUESTION — respond to this in the context of the above]\n"
+            f"{current}"
+        )
+    return current
+
+
 # ── Board member nodes ─────────────────────────────────────────────────────────
 
 def visionary_node(state: BoardState) -> dict:
@@ -67,7 +86,7 @@ def visionary_node(state: BoardState) -> dict:
         f"past or present — do NOT treat it as a future event or hallucination.\n\n"
         + VISIONARY_SYSTEM_PROMPT
     )
-    response = _invoke(dated_prompt, state["user_input"])
+    response = _invoke(dated_prompt, _build_user_message(state))
     return {"visionary_response": response}
 
 
@@ -81,7 +100,7 @@ def pragmatist_node(state: BoardState) -> dict:
         f"past or present — do NOT treat it as a future event or hallucination.\n\n"
         + PRAGMATIST_SYSTEM_PROMPT
     )
-    response = _invoke(dated_prompt, state["user_input"])
+    response = _invoke(dated_prompt, _build_user_message(state))
     return {"pragmatist_response": response}
 
 
@@ -95,7 +114,7 @@ def advocate_node(state: BoardState) -> dict:
         f"past or present — do NOT treat it as a future event or hallucination.\n\n"
         + DEVIL_ADVOCATE_SYSTEM_PROMPT
     )
-    response = _invoke(dated_prompt, state["user_input"])
+    response = _invoke(dated_prompt, _build_user_message(state))
     return {"advocate_response": response}
 
 

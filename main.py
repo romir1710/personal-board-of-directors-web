@@ -5,6 +5,7 @@ Endpoints:
   POST /api/debate   — accepts any of the following, auto-detected via Content-Type:
                          • application/json          → { "user_input": "..." }
                          • multipart/form-data       → text field  OR  PDF file upload
+                                                        optional: history (JSON string)
                          • application/x-www-form-urlencoded → text field
                        Returns the four node outputs as JSON.
 
@@ -62,14 +63,19 @@ app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
 # ── Helper ────────────────────────────────────────────────────────────────────
 
-async def _run_board(user_text: str) -> dict:
+import json
+
+async def _run_board(user_text: str, conversation_history: str = "") -> dict:
     """
     Run the synchronous LangGraph board in a thread pool so the FastAPI
     event loop is never blocked.
     Returns a plain dict with the four output fields.
     """
     result = await asyncio.to_thread(
-        board_graph.invoke, {"user_input": user_text}
+        board_graph.invoke, {
+            "user_input": user_text,
+            "conversation_history": conversation_history,
+        }
     )
     return {
         "visionary":  result.get("visionary_response", ""),
@@ -111,6 +117,7 @@ async def debate(request: Request):
     """
     content_type: str = request.headers.get("content-type", "")
     user_input: str = ""
+    conversation_history: str = ""
 
     # ── JSON body (sent by the web frontend) ───────────────────────────────────
     if "application/json" in content_type:
@@ -131,6 +138,12 @@ async def debate(request: Request):
         form = await request.form()
         file: UploadFile | None = form.get("file")  # type: ignore[assignment]
         text: str | None = form.get("text")  # type: ignore[assignment]
+        # Optional JSON-encoded conversation history from the frontend
+        history_raw: str | None = form.get("history")  # type: ignore[assignment]
+        try:
+            conversation_history = str(history_raw).strip() if history_raw and str(history_raw).strip() else ""
+        except Exception:
+            conversation_history = ""
 
         if file is not None and getattr(file, "filename", None):
             # ── PDF upload ─────────────────────────────────────────────────────
@@ -192,7 +205,7 @@ async def debate(request: Request):
     # ── Run the board (common path) ────────────────────────────────────────────
     try:
         logger.info("Convening the Board for input (%d chars)…", len(user_input))
-        result = await _run_board(user_input)
+        result = await _run_board(user_input, conversation_history)
         logger.info("Board resolution complete.")
         return JSONResponse(content=result)
     except Exception as exc:
