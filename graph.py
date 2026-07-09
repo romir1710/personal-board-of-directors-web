@@ -17,7 +17,7 @@ independence.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TypedDict
+from typing import Any, Optional, TypedDict
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, StateGraph
@@ -39,6 +39,7 @@ class BoardState(TypedDict):
     pragmatist_response: str
     advocate_response: str
     final_resolution: str
+    custom_llm: Optional[Any]   # per-request LLM override (Phase 2 — user API keys)
 
 
 # ── Shared LLM instance ────────────────────────────────────────────────────────
@@ -46,13 +47,14 @@ class BoardState(TypedDict):
 _llm = build_llm(temperature=0.7)
 
 
-def _invoke(system_prompt: str, user_message: str) -> str:
+def _invoke(system_prompt: str, user_message: str, llm: Any = None) -> str:
     """Call the LLM with a system prompt + user message and return the text."""
+    model = llm if llm is not None else _llm
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(content=user_message),
     ]
-    response = _llm.invoke(messages)
+    response = model.invoke(messages)
     return str(response.content).strip()
 
 
@@ -86,7 +88,7 @@ def visionary_node(state: BoardState) -> dict:
         f"past or present — do NOT treat it as a future event or hallucination.\n\n"
         + VISIONARY_SYSTEM_PROMPT
     )
-    response = _invoke(dated_prompt, _build_user_message(state))
+    response = _invoke(dated_prompt, _build_user_message(state), state.get("custom_llm"))
     return {"visionary_response": response}
 
 
@@ -100,7 +102,7 @@ def pragmatist_node(state: BoardState) -> dict:
         f"past or present — do NOT treat it as a future event or hallucination.\n\n"
         + PRAGMATIST_SYSTEM_PROMPT
     )
-    response = _invoke(dated_prompt, _build_user_message(state))
+    response = _invoke(dated_prompt, _build_user_message(state), state.get("custom_llm"))
     return {"pragmatist_response": response}
 
 
@@ -114,7 +116,7 @@ def advocate_node(state: BoardState) -> dict:
         f"past or present — do NOT treat it as a future event or hallucination.\n\n"
         + DEVIL_ADVOCATE_SYSTEM_PROMPT
     )
-    response = _invoke(dated_prompt, _build_user_message(state))
+    response = _invoke(dated_prompt, _build_user_message(state), state.get("custom_llm"))
     return {"advocate_response": response}
 
 
@@ -137,7 +139,7 @@ def chairperson_node(state: BoardState) -> dict:
         f"--- THE DEVIL'S ADVOCATE ---\n{state['advocate_response']}\n\n"
         f"Now deliver the final Board Resolution."
     )
-    response = _invoke(dated_prompt, synthesis_prompt)
+    response = _invoke(dated_prompt, synthesis_prompt, state.get("custom_llm"))
     return {"final_resolution": response}
 
 

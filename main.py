@@ -32,6 +32,7 @@ from fastapi.staticfiles import StaticFiles
 
 import config  # noqa: F401 — triggers .env loading & LangSmith setup
 from graph import board_graph
+from llm_factory import build_llm_for_request
 from pdf_utils import extract_text_from_pdf
 
 logging.basicConfig(
@@ -65,7 +66,11 @@ app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
 import json
 
-async def _run_board(user_text: str, conversation_history: str = "") -> dict:
+async def _run_board(
+    user_text: str,
+    conversation_history: str = "",
+    custom_llm=None,
+) -> dict:
     """
     Run the synchronous LangGraph board in a thread pool so the FastAPI
     event loop is never blocked.
@@ -75,6 +80,7 @@ async def _run_board(user_text: str, conversation_history: str = "") -> dict:
         board_graph.invoke, {
             "user_input": user_text,
             "conversation_history": conversation_history,
+            "custom_llm": custom_llm,
         }
     )
     return {
@@ -118,6 +124,11 @@ async def debate(request: Request):
     content_type: str = request.headers.get("content-type", "")
     user_input: str = ""
     conversation_history: str = ""
+    # Per-request API key fields (set by the multipart branch; None otherwise)
+    api_provider: str | None = None
+    api_model:    str | None = None
+    api_key:      str | None = None
+    api_base_url: str | None = None
 
     # ── JSON body (sent by the web frontend) ───────────────────────────────────
     if "application/json" in content_type:
@@ -140,6 +151,11 @@ async def debate(request: Request):
         text: str | None = form.get("text")  # type: ignore[assignment]
         # Optional JSON-encoded conversation history from the frontend
         history_raw: str | None = form.get("history")  # type: ignore[assignment]
+        # Optional per-request API key fields (Phase 2)
+        api_provider: str | None = form.get("api_provider")  # type: ignore[assignment]
+        api_model:    str | None = form.get("api_model")     # type: ignore[assignment]
+        api_key:      str | None = form.get("api_key")       # type: ignore[assignment]
+        api_base_url: str | None = form.get("api_base_url")  # type: ignore[assignment]
         try:
             conversation_history = str(history_raw).strip() if history_raw and str(history_raw).strip() else ""
         except Exception:
@@ -202,10 +218,24 @@ async def debate(request: Request):
             ),
         )
 
+    # ── Build per-request LLM if the user supplied their own API key ──────────
+    custom_llm = None
+    if api_provider and api_key and str(api_key).strip():
+        try:
+            custom_llm = build_llm_for_request(
+                provider=str(api_provider).strip(),
+                model=str(api_model).strip() if api_model else "",
+                api_key=str(api_key).strip(),   # never logged
+                base_url=str(api_base_url).strip() if api_base_url else None,
+            )
+            logger.info("Using user-supplied LLM: provider=%s model=%s", api_provider, api_model)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid API key configuration: {exc}")
+
     # ── Run the board (common path) ────────────────────────────────────────────
     try:
         logger.info("Convening the Board for input (%d chars)…", len(user_input))
-        result = await _run_board(user_input, conversation_history)
+        result = await _run_board(user_input, conversation_history, custom_llm)
         logger.info("Board resolution complete.")
         return JSONResponse(content=result)
     except Exception as exc:
