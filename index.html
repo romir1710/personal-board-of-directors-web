@@ -1390,9 +1390,11 @@
         confirmRow.className = 'session-delete-confirm';
         confirmRow.style.display = 'none';
         confirmRow.innerHTML =
-          '<span>Delete session?</span>' +
-          '<button class="session-confirm-btn yes">Delete</button>' +
-          '<button class="session-confirm-btn no">Cancel</button>';
+          '<span class="session-delete-label">Delete session?</span>' +
+          '<span class="session-confirm-btns">' +
+            '<button class="session-confirm-btn yes">Delete</button>' +
+            '<button class="session-confirm-btn no">Cancel</button>' +
+          '</span>';
         card.appendChild(confirmRow);
 
         // ── Event wiring ───────────────────────────────────────────────────────
