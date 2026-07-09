@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
@@ -1008,10 +1008,15 @@
     // API key state (loaded from Supabase user_settings table)
     let userApiSettings    = null;  // { provider, model, api_key, api_base_url } or null
     let selectedApiProvider = 'gemini';
+    let userTotalTurns     = 0;     // total turns used across ALL sessions (for global limit)
 
     // ── Helpers ────────────────────────────────────────────────────────────────
     function hasCustomKey() {
       return !!(currentUser && userApiSettings && userApiSettings.api_key);
+    }
+    // True when a logged-in user (no custom key) has used all 5 global turns
+    function hasReachedGlobalLimit() {
+      return !!(currentUser && !hasCustomKey() && userTotalTurns >= MAX_QUESTIONS);
     }
 
     // ── Sidebar controls ───────────────────────────────────────────────────────
@@ -1266,7 +1271,13 @@
         .eq('user_id', currentUser.id)
         .order('updated_at', { ascending: false })
         .limit(50);
+      // Compute global turn count across ALL sessions for logged-in limit enforcement
+      userTotalTurns = (data || []).reduce(
+        (sum, s) => sum + (Array.isArray(s.turns) ? s.turns.length : 0), 0
+      );
       renderSessionsSidebar(data || []);
+      // Lock the form if the global limit has been reached
+      if (hasReachedGlobalLimit()) lockSession();
     }
 
     function renderSessionsSidebar(sessions) {
@@ -1304,11 +1315,16 @@
       sessionComplete.classList.add('hidden');
       document.getElementById('session-complete-new-btn').classList.add('hidden');
       const unlimited = hasCustomKey();
-      if (!unlimited && boardHistory.length >= MAX_QUESTIONS) {
+      // For logged-in users without a key, check the global turn count
+      if (!unlimited && currentUser && userTotalTurns >= MAX_QUESTIONS) {
+        lockSession();
+      } else if (!unlimited && !currentUser && boardHistory.length >= MAX_QUESTIONS) {
         lockSession();
       } else {
         textarea.placeholder = boardHistory.length > 0
-          ? 'Ask a follow-up question\u2026' + (unlimited ? '' : ' (' + boardHistory.length + '/' + MAX_QUESTIONS + ' used)')
+          ? (currentUser
+              ? 'Ask a follow-up\u2026 (' + Math.max(0, MAX_QUESTIONS - userTotalTurns) + ' turn' + (Math.max(0, MAX_QUESTIONS - userTotalTurns) !== 1 ? 's' : '') + ' remaining across all sessions)'
+              : 'Ask a follow-up question\u2026 (' + boardHistory.length + '/' + MAX_QUESTIONS + ' used)')
           : 'Present your proposal to the board\u2026';
       }
       renderSessionLog();
@@ -1358,9 +1374,16 @@
       }
       sessionLog.style.display = 'block';
       sessionCounter.classList.remove('hidden');
-      sessionCounter.textContent = unlimited
-        ? boardHistory.length + ' turns'
-        : boardHistory.length + ' / ' + MAX_QUESTIONS;
+      if (unlimited) {
+        sessionCounter.textContent = boardHistory.length + ' turns';
+      } else if (currentUser) {
+        // Show global remaining across all sessions
+        const remaining = Math.max(0, MAX_QUESTIONS - userTotalTurns);
+        sessionCounter.textContent = userTotalTurns + ' / ' + MAX_QUESTIONS + ' total';
+        sessionCounter.title = remaining + ' turn' + (remaining !== 1 ? 's' : '') + ' remaining across all sessions';
+      } else {
+        sessionCounter.textContent = boardHistory.length + ' / ' + MAX_QUESTIONS;
+      }
       sessionLog.innerHTML = '';
       boardHistory.forEach((entry, i) => {
         const isActive = i === activeSessionIndex;
@@ -1548,8 +1571,10 @@
     // ── Form submit / fetch ────────────────────────────────────────────────────
     form.addEventListener('submit', async (e) => {
       e.preventDefault(); hideAlert();
-      // Block only if guest/no-key user has hit the 5Q limit
-      if (!hasCustomKey() && boardHistory.length >= MAX_QUESTIONS) return;
+      // Block if global limit reached (logged-in, no custom key)
+      if (hasReachedGlobalLimit()) return;
+      // Block guests at the per-session 5-turn limit
+      if (!currentUser && boardHistory.length >= MAX_QUESTIONS) return;
       const text = textarea.value.trim();
       const file = pdfInput.files && pdfInput.files[0] ? pdfInput.files[0] : null;
       if (!text && !file && !pdfContext) {
@@ -1591,12 +1616,18 @@
         const unlimited = hasCustomKey();
         if (unlimited) {
           textarea.placeholder = 'Ask another question\u2026 (unlimited with your API key)';
+        } else if (currentUser) {
+          const remaining = Math.max(0, MAX_QUESTIONS - (userTotalTurns + 1));
+          if (remaining > 0) textarea.placeholder = 'Ask a follow-up\u2026 (' + remaining + ' turn' + (remaining !== 1 ? 's' : '') + ' remaining across all sessions)';
         } else if (boardHistory.length < MAX_QUESTIONS) {
           textarea.placeholder = 'Ask a follow-up question\u2026 (' + boardHistory.length + '/' + MAX_QUESTIONS + ' used)';
         }
         renderSessionLog(); updatePanelText(false); renderResolution(entry.responses.resolution);
-        if (!unlimited && boardHistory.length >= MAX_QUESTIONS) lockSession();
+        // Lock if global limit reached after saving (loadSessions recomputes userTotalTurns)
         await saveSession();
+        // After saveSession -> loadSessions has refreshed userTotalTurns; check again
+        if (hasReachedGlobalLimit()) lockSession();
+        else if (!currentUser && boardHistory.length >= MAX_QUESTIONS) lockSession();
       } catch (err) {
         setLoading(false); updatePanelText(false);
         const msg = (err && err.message) ? err.message : 'An unknown error occurred.';
