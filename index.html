@@ -1118,7 +1118,7 @@
         let error;
         if (authEmailMode === 'signup') {
           ({ error } = await _supa.auth.signUp({ email, password }));
-          if (!error) feedback.textContent = 'Account created! Check your email to verify, then sign in.';
+          if (!error) { closeAuthModal(); closeSidebar(); }
         } else {
           ({ error } = await _supa.auth.signInWithPassword({ email, password }));
           if (!error) { closeAuthModal(); closeSidebar(); }
