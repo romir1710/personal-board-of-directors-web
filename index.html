@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>The Personal Board of Directors</title>
   <meta name="description" content="A multi-agent AI deliberation chamber â€” convene The Personal Board of Directors." />
-  <link rel="icon" type="image/png" href="favicon.png?v=2" />
+  <link rel="icon" type="image/png" href="favicon.png?v=3" />
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Google Fonts: Playfair Display + Inter + Anton (ghost text) -->
@@ -516,7 +516,16 @@
       cursor: pointer;
       font-family: 'JetBrains Mono', monospace;
     }
-    .api-provider-btn.active { background: rgba(201,178,122,0.1); color: rgba(201,178,122,0.9); }
+        .api-provider-btn.active { background: rgba(201,178,122,0.1); color: rgba(201,178,122,0.9); }
+    .api-provider-btn { position: relative; }
+    .api-provider-btn .key-dot {
+      position: absolute; top: 3px; right: 3px;
+      width: 4px; height: 4px; border-radius: 50%;
+      background: rgba(110,190,130,0.7);
+      box-shadow: 0 0 4px rgba(110,190,130,0.4);
+      display: none;
+    }
+    .api-provider-btn.has-key .key-dot { display: block; }
     #key-status-badge {
       display: inline-flex; align-items: center; gap: 5px;
       font-size: 10px; font-family: monospace;
@@ -610,10 +619,10 @@
           <div>
             <label class="text-[9px] uppercase tracking-[0.25em] font-medium block mb-1.5" style="color:rgba(207,210,214,0.35);">Provider</label>
             <div class="flex gap-1 p-0.5 rounded-lg" style="background:rgba(255,255,255,0.03);">
-              <button class="api-provider-btn active" data-provider="gemini">Gemini</button>
-              <button class="api-provider-btn" data-provider="openai">OpenAI</button>
-              <button class="api-provider-btn" data-provider="anthropic">Claude</button>
-              <button class="api-provider-btn" data-provider="openrouter">OpenRouter</button>
+              <button class="api-provider-btn active" data-provider="gemini">Gemini<span class="key-dot"></span></button>
+              <button class="api-provider-btn" data-provider="openai">OpenAI<span class="key-dot"></span></button>
+              <button class="api-provider-btn" data-provider="anthropic">Claude<span class="key-dot"></span></button>
+              <button class="api-provider-btn" data-provider="openrouter">OpenRouter<span class="key-dot"></span></button>
             </div>
           </div>
           <!-- Model name -->
@@ -1052,14 +1061,19 @@
     let currentUser        = null;
     let currentSessionId   = null;  // Supabase sessions row UUID for current chat
     let authEmailMode      = 'signin';
-    // API key state (loaded from Supabase user_settings table)
-    let userApiSettings    = null;  // { provider, model, api_key, api_base_url } or null
-    let selectedApiProvider = 'gemini';
+    // API key state â€” per-provider map loaded from Supabase user_api_keys table
+    // Shape: { gemini: {api_key, api_model, api_base_url}, openrouter: {...}, ... } or empty {}
+    let allApiKeys          = {};
+    let selectedApiProvider  = 'gemini';
     let userTotalTurns     = 0;     // total turns used across ALL sessions (for global limit)
 
     // ── Helpers ────────────────────────────────────────────────────────────────
     function hasCustomKey() {
-      return !!(currentUser && userApiSettings && userApiSettings.api_key);
+      const active = allApiKeys[selectedApiProvider];
+      return !!(currentUser && active && active.api_key);
+    }
+    function getActiveKeySettings() {
+      return allApiKeys[selectedApiProvider] || null;
     }
     // True when a logged-in user (no custom key) has used all 5 global turns
     function hasReachedGlobalLimit() {
@@ -1188,9 +1202,14 @@
     document.getElementById('api-clear-btn').addEventListener('click', clearUserApiSettings);
 
     async function saveUserApiSettings() {
-      const key   = apiKeyInput.value.trim();
+      let key = apiKeyInput.value.trim();
       const model = apiModelInput.value.trim();
-      if (!key) { apiSettingsFeedback.textContent = 'Please enter an API key.'; return; }
+      // If the key field still contains the masked placeholder, use the real key from memory
+      const existing = allApiKeys[selectedApiProvider];
+      if (key.includes('\u2022') && existing && existing.api_key) {
+        key = existing.api_key;
+      }
+      if (!key || key.includes('\u2022')) { apiSettingsFeedback.textContent = 'Please enter an API key.'; return; }
       const saveBtn = document.getElementById('api-save-btn');
       saveBtn.textContent = 'Saving\u2026'; saveBtn.disabled = true;
       try {
@@ -1202,13 +1221,13 @@
           api_base_url: apiBaseurlInput.value.trim() || null,
           updated_at:   new Date().toISOString(),
         };
-        const { error } = await _supa.from('user_settings').upsert(payload, { onConflict: 'user_id' });
+        const { error } = await _supa.from('user_api_keys').upsert(payload, { onConflict: 'user_id, api_provider' });
         if (error) { apiSettingsFeedback.textContent = 'Save failed: ' + error.message; return; }
-        userApiSettings = payload;
-        apiSettingsFeedback.textContent = '\u2713 Saved — unlimited questions unlocked!';
+        allApiKeys[selectedApiProvider] = { api_key: key, api_model: model, api_base_url: payload.api_base_url };
+        apiSettingsFeedback.textContent = '\u2713 Saved \u2014 unlimited questions unlocked!';
         updateKeyStatusBadge();
         // If the session was locked by the 5-question limit, unlock it now
-        if (boardHistory.length >= MAX_QUESTIONS) unlockSession();
+        if (hasReachedGlobalLimit()) unlockSession();
       } finally {
         saveBtn.textContent = 'Save'; saveBtn.disabled = false;
       }
@@ -1216,43 +1235,63 @@
 
     async function clearUserApiSettings() {
       if (!currentUser) return;
-      await _supa.from('user_settings').delete().eq('user_id', currentUser.id);
-      userApiSettings = null;
+      await _supa.from('user_api_keys').delete()
+        .eq('user_id', currentUser.id)
+        .eq('api_provider', selectedApiProvider);
+      delete allApiKeys[selectedApiProvider];
       apiKeyInput.value = ''; apiModelInput.value = ''; apiBaseurlInput.value = '';
-      apiSettingsFeedback.textContent = 'API key removed.';
+      apiSettingsFeedback.textContent = selectedApiProvider.toUpperCase() + ' key removed.';
       updateKeyStatusBadge();
     }
 
     function updateKeyStatusBadge() {
-      if (hasCustomKey()) {
-        const providerLabel = (userApiSettings.api_provider || 'custom').toUpperCase();
-        const modelLabel    = userApiSettings.api_model ? ' \u2022 ' + userApiSettings.api_model : '';
+      // Update green dots on provider buttons
+      document.querySelectorAll('.api-provider-btn').forEach(b => {
+        const prov = b.dataset.provider;
+        b.classList.toggle('has-key', !!(allApiKeys[prov] && allApiKeys[prov].api_key));
+      });
+      const active = getActiveKeySettings();
+      if (currentUser && active && active.api_key) {
+        const providerLabel = selectedApiProvider.toUpperCase();
+        const modelLabel = active.api_model ? ' \u2022 ' + active.api_model : '';
         keyStatusBadge.className = 'active';
         keyStatusText.textContent = providerLabel + modelLabel;
-        // Populate form fields
-        selectedApiProvider = userApiSettings.api_provider || 'gemini';
+        // Highlight the active provider tab
         document.querySelectorAll('.api-provider-btn').forEach(b => {
           b.classList.toggle('active', b.dataset.provider === selectedApiProvider);
         });
-        if (userApiSettings.api_model) apiModelInput.value = userApiSettings.api_model;
-        if (userApiSettings.api_base_url) { apiBaseurlInput.value = userApiSettings.api_base_url; apiBaseurlRow.classList.remove('hidden'); }
-        // Mask the key (show only last 4 chars)
-        apiKeyInput.value = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' + userApiSettings.api_key.slice(-4);
-        apiKeyInput.type  = 'password';
       } else {
         keyStatusBadge.className = 'inactive';
-        keyStatusText.textContent = 'No key \u2014 using default model';
+        const savedCount = Object.keys(allApiKeys).length;
+        keyStatusText.textContent = savedCount > 0
+          ? 'No key for ' + selectedApiProvider.toUpperCase() + ' \u2014 switch provider'
+          : 'No key \u2014 using default model';
       }
     }
 
     async function loadUserApiSettings() {
       if (!currentUser) return;
       const { data } = await _supa
-        .from('user_settings')
+        .from('user_api_keys')
         .select('api_provider, api_model, api_key, api_base_url')
-        .eq('user_id', currentUser.id)
-        .single();
-      userApiSettings = data || null;
+        .eq('user_id', currentUser.id);
+      allApiKeys = {};
+      (data || []).forEach(row => {
+        allApiKeys[row.api_provider] = {
+          api_key: row.api_key,
+          api_model: row.api_model || '',
+          api_base_url: row.api_base_url || '',
+        };
+      });
+      // Pre-populate fields for active provider
+      const saved = allApiKeys[selectedApiProvider];
+      if (saved) {
+        apiKeyInput.value = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' + saved.api_key.slice(-4);
+        apiKeyInput.type = 'password';
+        apiModelInput.value = saved.api_model || '';
+        apiBaseurlInput.value = saved.api_base_url || '';
+        if (selectedApiProvider === 'openrouter') apiBaseurlRow.classList.remove('hidden');
+      }
       updateKeyStatusBadge();
     }
 
@@ -1264,7 +1303,7 @@
         await loadUserApiSettings();
         await loadSessions();
       } else {
-        userApiSettings = null;
+        allApiKeys = {};
         updateKeyStatusBadge();
         renderSessionsSidebar([]);
       }
@@ -1749,16 +1788,20 @@
         if (text) formData.append('text', text);
         if (!file && pdfContext) { formData.set('text', pdfContext + (text ? '\n\n[Follow-up question]: ' + text : '')); }
         if (boardHistory.length > 0) formData.append('history', buildHistoryString());
-        // Attach API key fields if user has a custom key
+        // Attach API key fields if user has a custom key for the active provider
         if (hasCustomKey()) {
-          formData.append('api_provider', userApiSettings.api_provider || '');
-          formData.append('api_model',    userApiSettings.api_model    || '');
-          formData.append('api_key',      userApiSettings.api_key      || '');
-          if (userApiSettings.api_base_url) formData.append('api_base_url', userApiSettings.api_base_url);
+          const _aks = getActiveKeySettings();
+          formData.append('api_provider', selectedApiProvider);
+          formData.append('api_model',    _aks.api_model    || '');
+          formData.append('api_key',      _aks.api_key      || '');
+          if (_aks.api_base_url) formData.append('api_base_url', _aks.api_base_url);
         }
+        const _ctrl = new AbortController();
+        const _timeout = setTimeout(() => _ctrl.abort(), 180000); // 3 min timeout
         const response = await fetch('https://personal-board-of-directors.onrender.com/api/debate', {
-          method: 'POST', body: formData,
+          method: 'POST', body: formData, signal: _ctrl.signal,
         });
+        clearTimeout(_timeout);
         if (!response.ok) throw new Error('The chamber returned status ' + response.status + ' (' + response.statusText + ').');
         const data = await response.json();
         if (file) pdfContext = '[PDF attached in Q' + (boardHistory.length + 1) + ': ' + file.name + ' \u2014 context is known to the board]';
@@ -1791,9 +1834,13 @@
       } catch (err) {
         setLoading(false); updatePanelText(false);
         const msg = (err && err.message) ? err.message : 'An unknown error occurred.';
-        showAlert(msg.includes('Failed to fetch') || err.name === 'TypeError'
-          ? 'Unable to reach the deliberation server. Confirm the chamber backend is running and accessible.'
-          : msg);
+        if (err.name === 'AbortError') {
+          showAlert('The request timed out after 3 minutes. The board may be overloaded \u2014 try again shortly.');
+        } else {
+          showAlert(msg.includes('Failed to fetch') || err.name === 'TypeError'
+            ? 'Unable to reach the deliberation server. Confirm the chamber backend is running and accessible.'
+            : msg);
+        }
       }
     });
 

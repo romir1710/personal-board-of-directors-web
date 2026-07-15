@@ -8,6 +8,10 @@
     {
       "src": "*.webp",
       "use": "@vercel/static"
+    },
+    {
+      "src": "favicon.*",
+      "use": "@vercel/static"
     }
   ]
 }
