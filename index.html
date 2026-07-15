@@ -1683,14 +1683,10 @@
       let html = '';
       let i = 0;
       while (i < lines.length) {
-        let line = lines[i];
-        let trimmed = line.trim();
+        const line = lines[i];
+        const trimmed = line.trim();
         // Skip empty lines
         if (!trimmed) { i++; continue; }
-        
-        // Strip markdown hashes if the model decided to include them anyway
-        trimmed = trimmed.replace(/^#+\s*/, '');
-        
         // Detect section titles: short lines (under 50 chars) that don't end
         // with a period/comma and aren't just a single word continuation.
         // Also match numbered headings like "1. Timeline" or "2. Budget"
@@ -1698,37 +1694,28 @@
         const isSectionTitle = !isNumberedHeading
           && trimmed.length < 50
           && !/[.!?,;:]$/.test(trimmed)
-          && !/^(Hello|Right|But |Now |I |You |This |That |The user|Mate|Look|Strike)/.test(trimmed)
+          && !/^(Hello|Right|But |Now |I |You |This |That |The user|Mate|Look)/.test(trimmed)
           && !/[\u2022]/.test(trimmed);
-          
         if (isNumberedHeading) {
           // Numbered point heading: "1. Timeline Analysis"
+          // Split into number and rest
           const dotIdx = trimmed.indexOf('. ');
           const num = trimmed.substring(0, dotIdx + 1);
           const heading = trimmed.substring(dotIdx + 2);
           html += '<p style="margin-top:12px;margin-bottom:2px;color:rgba(201,178,122,0.7);font-size:12px;letter-spacing:0.05em;">'
                + '<span style="color:rgba(201,178,122,0.5);">' + num + '</span> '
-               + parseMarkdown(heading) + '</p>';
+               + heading + '</p>';
         } else if (isSectionTitle) {
           // Section title: "The Big Play", "Where This Gets Exciting"
           html += '<p style="margin-top:12px;margin-bottom:2px;color:rgba(201,178,122,0.65);font-size:11px;text-transform:uppercase;letter-spacing:0.15em;">'
-               + parseMarkdown(trimmed) + '</p>';
+               + trimmed + '</p>';
         } else {
           // Regular paragraph text
-          html += '<p style="margin-top:4px;margin-bottom:8px;">' + parseMarkdown(trimmed) + '</p>';
+          html += '<p style="margin-top:4px;margin-bottom:8px;">' + escapeHtml(trimmed) + '</p>';
         }
         i++;
       }
       return html;
-    }
-
-    function parseMarkdown(text) {
-      let escaped = escapeHtml(text);
-      // Parse bold (**text**)
-      escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      // Parse italic (*text*)
-      escaped = escaped.replace(/(^|[^\\])\*(.*?)\*/g, '$1<em>$2</em>');
-      return escaped;
     }
 
     function escapeHtml(text) {
