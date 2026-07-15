@@ -1,21 +1,21 @@
 """
 graph.py — LangGraph state machine: The Personal Board of Directors.
 
-Flow:
+Flow (parallelised):
   user_input
       │
       ├──► visionary_node  ──┐
       ├──► pragmatist_node ──┼──► chairperson_node ──► END
       └──► advocate_node   ──┘
 
-The three analyst nodes run sequentially (LangGraph does not yet support
-native fan-out without Send API), but they operate independently on the raw
-user_input so they do NOT influence each other — preserving intellectual
-independence.
+The three analyst nodes run in parallel via ThreadPoolExecutor since they
+operate independently on the raw user_input — preserving intellectual
+independence while cutting response time by ~50%.
 """
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Any, Optional, TypedDict
 
@@ -76,60 +76,48 @@ def _build_user_message(state: BoardState) -> str:
     return current
 
 
-# ── Board member nodes ─────────────────────────────────────────────────────────
-
-def visionary_node(state: BoardState) -> dict:
-    """The Visionary — ambition, scale, creative potential."""
+def _make_dated_prompt(base_prompt: str) -> str:
+    """Prepend the current date context to a system prompt."""
     current_date = datetime.now().strftime("%B %d, %Y")
-    dated_prompt = (
+    return (
         f"CRITICAL CONTEXT: The current real-world date is exactly {current_date}. "
         f"All project timelines, academic years, and resume dates must be evaluated "
         f"relative to this date. Anything dated on or before {current_date} is in the "
         f"past or present — do NOT treat it as a future event or hallucination.\n\n"
-        + VISIONARY_SYSTEM_PROMPT
+        + base_prompt
     )
-    response = _invoke(dated_prompt, _build_user_message(state), state.get("custom_llm"))
-    return {"visionary_response": response}
 
 
-def pragmatist_node(state: BoardState) -> dict:
-    """The Pragmatist — logistics, time, budget, grounded reality."""
-    current_date = datetime.now().strftime("%B %d, %Y")
-    dated_prompt = (
-        f"CRITICAL CONTEXT: The current real-world date is exactly {current_date}. "
-        f"All project timelines, academic years, and resume dates must be evaluated "
-        f"relative to this date. Anything dated on or before {current_date} is in the "
-        f"past or present — do NOT treat it as a future event or hallucination.\n\n"
-        + PRAGMATIST_SYSTEM_PROMPT
-    )
-    response = _invoke(dated_prompt, _build_user_message(state), state.get("custom_llm"))
-    return {"pragmatist_response": response}
+# ── Parallel advisors node ─────────────────────────────────────────────────────
 
+def parallel_advisors_node(state: BoardState) -> dict:
+    """Run all three advisors in parallel — same prompts, ~3x faster."""
+    user_msg = _build_user_message(state)
+    llm = state.get("custom_llm")
 
-def advocate_node(state: BoardState) -> dict:
-    """The Devil's Advocate — flaws, risks, blind spots."""
-    current_date = datetime.now().strftime("%B %d, %Y")
-    dated_prompt = (
-        f"CRITICAL CONTEXT: The current real-world date is exactly {current_date}. "
-        f"All project timelines, academic years, and resume dates must be evaluated "
-        f"relative to this date. Anything dated on or before {current_date} is in the "
-        f"past or present — do NOT treat it as a future event or hallucination.\n\n"
-        + DEVIL_ADVOCATE_SYSTEM_PROMPT
-    )
-    response = _invoke(dated_prompt, _build_user_message(state), state.get("custom_llm"))
-    return {"advocate_response": response}
+    def run_visionary():
+        return _invoke(_make_dated_prompt(VISIONARY_SYSTEM_PROMPT), user_msg, llm)
+
+    def run_pragmatist():
+        return _invoke(_make_dated_prompt(PRAGMATIST_SYSTEM_PROMPT), user_msg, llm)
+
+    def run_advocate():
+        return _invoke(_make_dated_prompt(DEVIL_ADVOCATE_SYSTEM_PROMPT), user_msg, llm)
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        vis_future  = pool.submit(run_visionary)
+        prag_future = pool.submit(run_pragmatist)
+        adv_future  = pool.submit(run_advocate)
+
+    return {
+        "visionary_response":  vis_future.result(),
+        "pragmatist_response": prag_future.result(),
+        "advocate_response":   adv_future.result(),
+    }
 
 
 def chairperson_node(state: BoardState) -> dict:
     """The Chairperson — synthesises all three into the final Board Resolution."""
-    current_date = datetime.now().strftime("%B %d, %Y")
-    dated_prompt = (
-        f"CRITICAL CONTEXT: The current real-world date is exactly {current_date}. "
-        f"All project timelines, academic years, and resume dates must be evaluated "
-        f"relative to this date. Anything dated on or before {current_date} is in the "
-        f"past or present — do NOT treat it as a future event or hallucination.\n\n"
-        + CHAIRPERSON_SYSTEM_PROMPT
-    )
     synthesis_prompt = (
         f"The user submitted the following for Board review:\n\n"
         f'"""\n{state["user_input"]}\n"""\n\n'
@@ -139,7 +127,7 @@ def chairperson_node(state: BoardState) -> dict:
         f"--- THE DEVIL'S ADVOCATE ---\n{state['advocate_response']}\n\n"
         f"Now deliver the final Board Resolution."
     )
-    response = _invoke(dated_prompt, synthesis_prompt, state.get("custom_llm"))
+    response = _invoke(_make_dated_prompt(CHAIRPERSON_SYSTEM_PROMPT), synthesis_prompt, state.get("custom_llm"))
     return {"final_resolution": response}
 
 
@@ -149,15 +137,11 @@ def build_board_graph() -> StateGraph:
     """Compile and return the Board of Directors LangGraph."""
     builder = StateGraph(BoardState)
 
-    builder.add_node("visionary", visionary_node)
-    builder.add_node("pragmatist", pragmatist_node)
-    builder.add_node("advocate", advocate_node)
+    builder.add_node("advisors", parallel_advisors_node)
     builder.add_node("chairperson", chairperson_node)
 
-    builder.set_entry_point("visionary")
-    builder.add_edge("visionary", "pragmatist")
-    builder.add_edge("pragmatist", "advocate")
-    builder.add_edge("advocate", "chairperson")
+    builder.set_entry_point("advisors")
+    builder.add_edge("advisors", "chairperson")
     builder.add_edge("chairperson", END)
 
     return builder.compile()
@@ -165,3 +149,4 @@ def build_board_graph() -> StateGraph:
 
 # Singleton compiled graph — imported by main.py
 board_graph = build_board_graph()
+
