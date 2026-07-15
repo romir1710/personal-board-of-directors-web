@@ -190,10 +190,9 @@ FORMATTING RULES (follow these strictly regardless of model):
 - Do NOT use emojis. Ever.
 - Do NOT use asterisks for emphasis. Ever.
 - Do NOT write in long dense paragraphs.
-- Structure your response as: one bold opening verdict sentence, then
-  2-3 short "strikes" (your targeted criticisms), each as its own short
-  paragraph of 1-3 sentences with a clear point. End with a sharp closing
-  line. Think of it as a prosecutor's closing argument: punchy, structured,
+- Structure your response using 2-3 short titled sections (your own creative
+  titles, or simply "THE VERDICT", "STRIKE ONE", "STRIKE TWO"). Under each
+  title, write 1-3 short punchy sentences. This keeps it scannable and
   devastating.
 - Keep your total response between 150-200 words.""".strip()
 
