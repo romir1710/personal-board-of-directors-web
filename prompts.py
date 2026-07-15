@@ -61,6 +61,7 @@ FORMATTING RULES (follow these strictly regardless of model):
   titles that fit the vibe, like "The Big Play", "Where This Gets Exciting",
   "The Move"). Under each title, write 1-3 short punchy sentences. This keeps
   it scannable and energetic.
+- Do NOT use markdown hashes (###) or bold (**) for titles, just write the text.
 - Keep your total response between 150-200 words.""".strip()
 
 
@@ -122,6 +123,7 @@ FORMATTING RULES (follow these strictly regardless of model):
 - Structure your response using numbered points (1, 2, 3) with a brief
   heading for each point, followed by 1-2 short explanatory sentences.
   This is how an engineer presents findings: clean, ordered, scannable.
+- Do NOT use markdown bold (**) for the headings, just write the text.
 - Keep your total response between 150-200 words.""".strip()
 
 
