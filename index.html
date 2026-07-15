@@ -1664,13 +1664,64 @@
         textContent.innerHTML = '<span class="text-platinum/30 italic">' + d.waiting + '</span>';
       } else {
         const txt = responses[d.key];
-        textContent.textContent = (txt && String(txt).trim()) ? txt : d.waiting;
+        if (txt && String(txt).trim()) {
+          textContent.innerHTML = formatAdvisorText(txt);
+        } else {
+          textContent.textContent = d.waiting;
+        }
         textContent.style.animation = 'none';
         void textContent.offsetWidth;
         textContent.classList.add('fade-in');
         textContent.style.animation = '';
       }
       textScroll.scrollTop = 0;
+    }
+
+    // ── Advisor response formatter (structured text, not bullets) ────────────
+    function formatAdvisorText(raw) {
+      const lines = raw.split('\n');
+      let html = '';
+      let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+        const trimmed = line.trim();
+        // Skip empty lines
+        if (!trimmed) { i++; continue; }
+        // Detect section titles: short lines (under 50 chars) that don't end
+        // with a period/comma and aren't just a single word continuation.
+        // Also match numbered headings like "1. Timeline" or "2. Budget"
+        const isNumberedHeading = /^\d+\.\s+\S/.test(trimmed);
+        const isSectionTitle = !isNumberedHeading
+          && trimmed.length < 50
+          && !/[.!?,;:]$/.test(trimmed)
+          && !/^(Hello|Right|But |Now |I |You |This |That |The user|Mate|Look)/.test(trimmed)
+          && !/[\u2022]/.test(trimmed);
+        if (isNumberedHeading) {
+          // Numbered point heading: "1. Timeline Analysis"
+          // Split into number and rest
+          const dotIdx = trimmed.indexOf('. ');
+          const num = trimmed.substring(0, dotIdx + 1);
+          const heading = trimmed.substring(dotIdx + 2);
+          html += '<p style="margin-top:12px;margin-bottom:2px;color:rgba(201,178,122,0.7);font-size:12px;letter-spacing:0.05em;">'
+               + '<span style="color:rgba(201,178,122,0.5);">' + num + '</span> '
+               + heading + '</p>';
+        } else if (isSectionTitle) {
+          // Section title: "The Big Play", "Where This Gets Exciting"
+          html += '<p style="margin-top:12px;margin-bottom:2px;color:rgba(201,178,122,0.65);font-size:11px;text-transform:uppercase;letter-spacing:0.15em;">'
+               + trimmed + '</p>';
+        } else {
+          // Regular paragraph text
+          html += '<p style="margin-top:4px;margin-bottom:8px;">' + escapeHtml(trimmed) + '</p>';
+        }
+        i++;
+      }
+      return html;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
 
     // ── Resolution structured renderer ─────────────────────────────────────────
