@@ -366,10 +366,10 @@
       top: 50%; left: 0;
       transform: translateY(-50%);
       z-index: 40;
-      width: 26px; height: 56px;
+      width: 32px; height: 64px;
       background: rgba(12,13,17,0.88);
       backdrop-filter: blur(8px);
-      border: 1px solid rgba(201,178,122,0.2);
+      border: 1px solid rgba(201,178,122,0.3);
       border-left: none;
       border-radius: 0 8px 8px 0;
       display: flex; align-items: center; justify-content: center;
@@ -580,6 +580,10 @@
           <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
           Sign In
         </button>
+        <div class="mt-4 flex items-start gap-2 p-2.5 rounded-lg" style="background:rgba(201,178,122,0.05); border:1px solid rgba(201,178,122,0.15);">
+          <i data-lucide="alert-triangle" class="w-3.5 h-3.5 shrink-0 mt-0.5" style="color:rgba(201,178,122,0.8);"></i>
+          <p class="text-[9px] leading-relaxed" style="color:rgba(207,210,214,0.5);">If API Key not Provided, the Board Shall run on a default model, limited to 5 total turns, and responses may not be accurate &amp; may return errors from time to time.</p>
+        </div>
       </div>
       <!-- Logged-in view -->
       <div id="auth-user-view" class="hidden">
@@ -615,6 +619,10 @@
       <!-- Collapsible settings form -->
       <div id="api-settings-panel">
         <div class="px-5 pb-5 space-y-3.5">
+          <div class="flex items-start gap-2 p-2.5 rounded-lg" style="background:rgba(201,178,122,0.05); border:1px solid rgba(201,178,122,0.15);">
+            <i data-lucide="alert-triangle" class="w-3.5 h-3.5 shrink-0 mt-0.5" style="color:rgba(201,178,122,0.8);"></i>
+            <p class="text-[9px] leading-relaxed" style="color:rgba(207,210,214,0.5);">If API Key not Provided, the Board Shall run on a default model, limited to 5 total turns, and responses may not be accurate &amp; may return errors from time to time.</p>
+          </div>
           <!-- Provider selector -->
           <div>
             <label class="text-[9px] uppercase tracking-[0.25em] font-medium block mb-1.5" style="color:rgba(207,210,214,0.35);">Provider</label>
@@ -669,7 +677,7 @@
   <div id="sidebar-backdrop"></div>
   <!-- Sidebar toggle tab (always visible on left edge) -->
   <button id="sidebar-toggle" aria-label="Toggle sidebar">
-    <i data-lucide="panel-left" class="w-3.5 h-3.5"></i>
+    <i data-lucide="panel-left" class="w-5 h-5"></i>
   </button>
 
   <!-- ===================== AUTH MODAL ===================== -->
