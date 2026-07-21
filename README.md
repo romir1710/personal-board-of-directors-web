@@ -182,6 +182,8 @@ The three advisor nodes run **in parallel** using `ThreadPoolExecutor` for signi
 
 ## 📝 License
 
+<sub>This is a free, educational portfolio project. The characters and AI personas are parodies and are in no way affiliated with, endorsed by, or representing any real persons or entities.</sub>
+
 MIT License
 
 Copyright (c) 2025 Romir
