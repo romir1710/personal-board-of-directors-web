@@ -1256,7 +1256,7 @@
         apiSettingsFeedback.textContent = '\u2713 Saved \u2014 unlimited questions unlocked!';
         updateKeyStatusBadge();
         // If the session was locked by the 5-question limit, unlock it now
-        if (hasReachedGlobalLimit()) unlockSession();
+        if (textarea.disabled && hasCustomKey()) unlockSession();
       } finally {
         saveBtn.textContent = 'Save'; saveBtn.disabled = false;
       }
