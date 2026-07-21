@@ -804,6 +804,17 @@
                 <i data-lucide="paperclip" class="w-4 h-4"></i>
                 <span id="pdf-btn-label" class="hidden sm:inline">Attach PDF</span>
               </button>
+              <!-- Remove PDF button (only visible when a PDF is attached) -->
+              <button
+                id="pdf-remove-btn"
+                type="button"
+                title="Remove attached PDF"
+                class="hidden group inline-flex items-center justify-center rounded-full p-2.5 text-sm transition-all duration-300 hairline lux-shadow"
+                style="background: transparent; border-color: rgba(201,178,122,0.28); color: rgba(201,178,122,0.6);"
+                onmouseenter="this.style.borderColor='rgba(224,96,108,0.6)'; this.style.color='rgba(224,96,108,1)'; this.style.transform='scale(1.04)';"
+                onmouseleave="this.style.borderColor='rgba(201,178,122,0.28)'; this.style.color='rgba(201,178,122,0.6)'; this.style.transform='scale(1)';">
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
               <!-- Selected file name pill -->
               <span id="pdf-filename" class="hidden text-[10px] font-mono text-champagne/60 tracking-wide max-w-[140px] truncate"></span>
               <!-- Convene button -->
@@ -1016,15 +1027,24 @@
     const pdfInput    = document.getElementById('pdf-input');
     const pdfBtn      = document.getElementById('pdf-btn');
     const pdfFilename = document.getElementById('pdf-filename');
+    const pdfRemoveBtn = document.getElementById('pdf-remove-btn');
     pdfBtn.addEventListener('click', () => pdfInput.click());
     pdfInput.addEventListener('change', () => {
       if (pdfInput.files && pdfInput.files[0]) {
         pdfFilename.textContent = pdfInput.files[0].name;
         pdfFilename.classList.remove('hidden');
+        pdfRemoveBtn.classList.remove('hidden');
       } else {
         pdfFilename.textContent = '';
         pdfFilename.classList.add('hidden');
+        pdfRemoveBtn.classList.add('hidden');
       }
+    });
+    pdfRemoveBtn.addEventListener('click', () => {
+      pdfInput.value = '';
+      pdfFilename.textContent = '';
+      pdfFilename.classList.add('hidden');
+      pdfRemoveBtn.classList.add('hidden');
     });
 
     // ── Carousel DOM refs ──────────────────────────────────────────────────────
@@ -1548,7 +1568,7 @@
       textarea.value = ''; textarea.disabled = false;
       textarea.classList.remove('opacity-40', 'cursor-not-allowed');
       textarea.placeholder = 'Present your proposal to the board. e.g. \u201cShould we pivot our product toward an enterprise-only model next quarter?\u201d';
-      pdfInput.value = ''; pdfFilename.textContent = ''; pdfFilename.classList.add('hidden');
+      pdfInput.value = ''; pdfFilename.textContent = ''; pdfFilename.classList.add('hidden'); pdfRemoveBtn.classList.add('hidden');
       btn.removeAttribute('disabled');   btn.classList.remove('opacity-40', 'cursor-not-allowed');
       pdfBtn.removeAttribute('disabled'); pdfBtn.classList.remove('opacity-40', 'cursor-not-allowed');
       sessionComplete.classList.add('hidden');
@@ -1874,7 +1894,7 @@
         boardHistory.push(entry);
         activeSessionIndex = boardHistory.length - 1;
         setLoading(false);
-        textarea.value = ''; pdfInput.value = ''; pdfFilename.textContent = ''; pdfFilename.classList.add('hidden');
+        textarea.value = ''; pdfInput.value = ''; pdfFilename.textContent = ''; pdfFilename.classList.add('hidden'); pdfRemoveBtn.classList.add('hidden');
         const unlimited = hasCustomKey();
         if (unlimited) {
           textarea.placeholder = 'Ask another question\u2026 (unlimited with your API key)';
